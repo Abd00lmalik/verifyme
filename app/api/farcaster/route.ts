@@ -1,12 +1,13 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 
-async function sha256(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as ArrayBuffer);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+function sha256(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0').repeat(8).slice(0, 64);
 }
 
 function maskUsername(username: string): string {
@@ -26,8 +27,8 @@ export async function POST(req: NextRequest) {
     // TODO: Verify SIWF signature against Farcaster relay when devnet RPC is available
     // For now, accept all signed-in users (mock mode)
 
-    const proofHash = await sha256(wallet + String(fid));
-    const usernameHash = await sha256(username);
+    const proofHash = sha256(wallet + String(fid));
+    const usernameHash = sha256(username);
     const maskedUsername = maskUsername(username);
 
     return NextResponse.json({
@@ -42,4 +43,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+
 

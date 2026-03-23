@@ -1,12 +1,13 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
-async function sha256(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data as unknown as ArrayBuffer);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+function sha256(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0').repeat(8).slice(0, 64);
 }
 
 function maskUsername(username: string): string {
@@ -52,8 +53,8 @@ export async function GET(req: NextRequest) {
       id = user.id;
     }
 
-    const proofHash = await sha256(wallet + id);
-    const usernameHash = await sha256(username);
+    const proofHash = sha256(wallet + id);
+    const usernameHash = sha256(username);
     const maskedUsername = maskUsername(username);
 
     const params = new URLSearchParams({
@@ -71,4 +72,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
   }
 }
+
+
+
 
