@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useSignIn } from '@farcaster/auth-kit';
 import { Spinner } from '@/components/ui/Spinner';
@@ -9,7 +9,7 @@ interface FarcasterSignInProps {
 }
 
 export default function FarcasterSignIn({ onSuccess, onError }: FarcasterSignInProps) {
-  const { signIn, isLoading, error } = useSignIn({
+  const { signIn, isPolling: isLoading, error } = useSignIn({
     onSuccess: ({ fid, username, custody, signature }: { fid: number; username: string; custody: string; signature: `0x${string}` }) => {
       onSuccess({ fid, username, custody: custody as string, signature: signature as string });
     },
@@ -36,3 +36,4 @@ export default function FarcasterSignIn({ onSuccess, onError }: FarcasterSignInP
     </button>
   );
 }
+
