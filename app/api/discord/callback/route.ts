@@ -71,3 +71,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
   }
 }
+
