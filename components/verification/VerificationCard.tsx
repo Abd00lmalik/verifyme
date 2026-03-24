@@ -231,3 +231,4 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
   );
 }
 
+
