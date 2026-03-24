@@ -11,7 +11,7 @@ const WalletProvider: FC<Props> = ({ children }) => {
   const endpoint = process.env.NEXT_PUBLIC_RIALO_RPC_URL || clusterApiUrl('devnet');
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <SolanaWalletProvider wallets={[]} autoConnect={false}>
+      <SolanaWalletProvider wallets={[]} autoConnect={true}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>
