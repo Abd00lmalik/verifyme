@@ -18,7 +18,7 @@ function maskUsername(username: string): string {
 // Discord snowflake encodes creation timestamp
 function discordAccountCreated(id: string): string {
   try {
-    const ms = Number(BigInt(id) >> 22n) + 1420070400000;
+    const ms = Math.floor(parseInt(id) / 4194304) + 1420070400000;
     return new Date(ms).toISOString();
   } catch {
     return new Date().toISOString();
@@ -89,3 +89,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
