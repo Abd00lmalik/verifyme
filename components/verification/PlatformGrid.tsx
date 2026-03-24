@@ -1,7 +1,6 @@
-'use client';
-
-import { VerificationCard } from './VerificationCard';
-import type { Platform, VerificationState } from '@/lib/types';
+﻿"use client";
+import { VerificationCard } from "./VerificationCard";
+import type { Platform, VerificationState } from "@/lib/types";
 
 interface PlatformGridProps {
   verifications: VerificationState[];
@@ -9,9 +8,10 @@ interface PlatformGridProps {
   readOnly?: boolean;
   onRevoke?: (platform: Platform) => Promise<void>;
   onConnect?: (platform: Platform) => void;
+  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; signature: string }) => void;
 }
 
-export function PlatformGrid({ verifications, wallet, readOnly, onRevoke, onConnect }: PlatformGridProps) {
+export function PlatformGrid({ verifications, wallet, readOnly, onRevoke, onConnect, onFarcasterConnect }: PlatformGridProps) {
   return (
     <div>
       {verifications.map((v) => (
@@ -22,6 +22,7 @@ export function PlatformGrid({ verifications, wallet, readOnly, onRevoke, onConn
           readOnly={readOnly}
           onRevoke={onRevoke}
           onConnect={onConnect}
+          onFarcasterConnect={onFarcasterConnect}
         />
       ))}
     </div>

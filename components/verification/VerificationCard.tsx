@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { Copy, Check, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +10,8 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { formatDate, formatProofHash } from "@/lib/utils";
 import { EXPLORER_URL } from "@/lib/constants";
 import type { Platform, VerificationState } from "@/lib/types";
+
+const FarcasterSignIn = dynamic(() => import("./FarcasterSignIn"), { ssr: false });
 
 function GitHubIcon({ size = 20 }: { size?: number }) {
   return (
@@ -55,9 +58,10 @@ interface VerificationCardProps {
   readOnly?: boolean;
   onRevoke?: (platform: Platform) => Promise<void>;
   onConnect?: (platform: Platform) => void;
+  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; signature: string }) => void;
 }
 
-export function VerificationCard({ state, wallet, readOnly = false, onRevoke, onConnect }: VerificationCardProps) {
+export function VerificationCard({ state, wallet, readOnly = false, onRevoke, onConnect, onFarcasterConnect }: VerificationCardProps) {
   const { platform, status, proof, error } = state;
   const Icon = PLATFORM_ICONS[platform];
   const color = PLATFORM_COLORS[platform];
@@ -72,10 +76,8 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
     } else if (platform === "discord") {
       localStorage.setItem("verifyme_pending_wallet", wallet);
       window.location.href = `/api/discord?wallet=${wallet}`;
-    } else if (platform === "farcaster") {
-      onConnect?.("farcaster");
     }
-  }, [platform, wallet, onConnect]);
+  }, [platform, wallet]);
 
   const handleRevoke = useCallback(async () => {
     setRevoking(true);
@@ -107,9 +109,16 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
             <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "16px", lineHeight: 1.6 }}>
               {PLATFORM_DESCRIPTION[platform]}
             </p>
-            <button onClick={handleConnect} className="btn-primary" style={{ width: "100%", height: "38px", borderRadius: "10px", background: "var(--accent)", color: "var(--text-inverse)", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 500, fontFamily: "inherit" }}>
-              Connect {platform.charAt(0).toUpperCase() + platform.slice(1)}
-            </button>
+            {platform === "farcaster" ? (
+              <FarcasterSignIn
+                onSuccess={(data) => onFarcasterConnect?.(data)}
+                onError={() => {}}
+              />
+            ) : (
+              <button onClick={handleConnect} className="btn-primary" style={{ width: "100%", height: "38px", borderRadius: "10px", background: "var(--accent)", color: "var(--text-inverse)", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 500, fontFamily: "inherit" }}>
+                Connect {platform.charAt(0).toUpperCase() + platform.slice(1)}
+              </button>
+            )}
             <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "8px", textAlign: "center" }}>
               {PLATFORM_NOTE[platform]}
             </p>
@@ -194,7 +203,6 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
             )}
           </div>
         )}
-
       </div>
 
       <Modal open={showRevokeModal} onClose={() => setShowRevokeModal(false)} title="Revoke verification?"
