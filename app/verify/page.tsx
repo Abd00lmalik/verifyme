@@ -43,6 +43,7 @@ function VerifyDashboard() {
     const usernameHash = searchParams.get("usernameHash");
     const maskedUsername = searchParams.get("maskedUsername");
     const pfpUrl = searchParams.get("pfpUrl") || "";
+    const accountCreatedAt = searchParams.get("accountCreatedAt") || "";
     const repoCount = searchParams.get("repoCount");
     const errorParam = searchParams.get("error");
 
@@ -66,6 +67,7 @@ function VerifyDashboard() {
         maskedUsername: maskedUsername || "",
         pfpUrl,
         ...(repoCount !== null ? { repoCount: Number(repoCount) } : {}),
+        ...(accountCreatedAt ? { accountCreatedAt } : {}),
         verifiedAt: new Date().toISOString(),
       };
 
@@ -301,3 +303,5 @@ export default function VerifyPage() {
     </Suspense>
   );
 }
+
+

@@ -159,8 +159,10 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
                   {platform === "farcaster" && proof.followerCount !== undefined && (
                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{proof.followerCount} followers</span>
                   )}
-                  {platform === "discord" && (
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Discord account</span>
+                  {platform === "discord" && proof.accountCreatedAt && (
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      Account since {new Date(proof.accountCreatedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                    </span>
                   )}
                   <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                     Verified {formatDate(proof.verifiedAt)}
@@ -228,3 +230,4 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
     </div>
   );
 }
+

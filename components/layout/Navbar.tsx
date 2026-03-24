@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#faq', label: 'FAQ' },
-  { href: '#', label: 'Docs' },
+  { href: 'https://docs.rialo.xyz', label: 'Docs' },
 ];
 
 export function Navbar() {
@@ -45,7 +45,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Center nav — desktop only */}
+        {/* Center nav â€” desktop only */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '4px' }} className="hide-mobile">
           {NAV_LINKS.map((link) => (
             <Link
@@ -86,3 +86,4 @@ export function Navbar() {
     </nav>
   );
 }
+

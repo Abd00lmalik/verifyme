@@ -15,6 +15,16 @@ function maskUsername(username: string): string {
   return username.slice(0, 2) + "****" + username.slice(-2);
 }
 
+// Discord snowflake encodes creation timestamp
+function discordAccountCreated(id: string): string {
+  try {
+    const ms = Number(BigInt(id) >> 22n) + 1420070400000;
+    return new Date(ms).toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
@@ -50,7 +60,6 @@ export async function GET(req: NextRequest) {
       const user = await userRes.json();
       username = user.username;
       id = user.id;
-      // Build CDN avatar URL (fallback to default if no avatar set)
       avatar = user.avatar
         ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
         : `https://cdn.discordapp.com/embed/avatars/${Number(user.discriminator || 0) % 5}.png`;
@@ -59,6 +68,7 @@ export async function GET(req: NextRequest) {
     const proofHash = sha256(wallet + id);
     const usernameHash = sha256(username);
     const maskedUsername = maskUsername(username);
+    const accountCreatedAt = discordAccountCreated(id);
 
     const params = new URLSearchParams({
       success: "true",
@@ -67,12 +77,15 @@ export async function GET(req: NextRequest) {
       usernameHash,
       maskedUsername,
       pfpUrl: avatar,
+      accountCreatedAt,
       wallet,
     });
 
     return NextResponse.redirect(`${appUrl}/verify?${params}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.redirect(`${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
+    return NextResponse.redirect(
+      `${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`
+    );
   }
 }

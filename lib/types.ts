@@ -18,6 +18,7 @@ export interface ProofRecord {
   repoCount?: number;
   followerCount?: number;
   pfpUrl?: string;
+  accountCreatedAt?: string;
 }
 
 export interface VerificationState {
@@ -33,4 +34,5 @@ export interface ToastItem {
   title: string;
   message?: string;
 }
+
 
