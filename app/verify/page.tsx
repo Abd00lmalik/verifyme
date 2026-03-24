@@ -16,6 +16,7 @@ import { ToastContainer } from "@/components/ui/Toast";
 import { Divider } from "@/components/ui/Divider";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { generateAvatarColor } from "@/lib/utils";
+import { saveProofToStorage, removeProofFromStorage } from "@/hooks/useVerifications";
 import type { Platform } from "@/lib/types";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -81,6 +82,7 @@ function VerifyDashboard() {
         body: JSON.stringify({ wallet, platform }),
       });
       if (!res.ok) throw new Error("Failed");
+      removeProofFromStorage(wallet, platform);
       await refetch();
       showToast("success", "Revoked", `${platform} verification removed.`);
     } catch {
@@ -209,3 +211,4 @@ export default function VerifyPage() {
     </Suspense>
   );
 }
+

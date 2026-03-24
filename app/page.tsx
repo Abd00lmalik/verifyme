@@ -1,4 +1,4 @@
-import { Hero } from '@/components/landing/Hero';
+﻿import { Hero } from '@/components/landing/Hero';
 import { PlatformShowcase } from '@/components/landing/PlatformShowcase';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { TrustBar } from '@/components/landing/TrustBar';
@@ -15,3 +15,4 @@ export default function HomePage() {
     </>
   );
 }
+
