@@ -178,7 +178,7 @@ export default function CertificatePage({ params }: { params: { wallet: string }
 
           
           <a
-            href={"https://twitter.com/intent/tweet?text=" + encodeURIComponent("Just verified my builder identity on-chain using @VerifyMe â€” built on @RialoProtocol. " + count + "/3 identities cryptographically proven. No personal data stored. Just proof.\n\nThis is what Web3 identity should look like ðŸ”") + "&url=" + tweetUrl}
+            <a`r`n            href={"https://twitter.com/intent/tweet?text=" + encodeURIComponent("Just verified my builder identity on-chain using @VerifyMe â€” built on @RialoProtocol. " + count + "/3 identities cryptographically proven. No personal data stored. Just proof.\n\nThis is what Web3 identity should look like ðŸ”") + "&url=" + tweetUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", height: "48px", borderRadius: "12px", background: "#000", border: "1px solid #2a2a2a", color: "#fff", fontSize: "14px", fontWeight: 600, textDecoration: "none", letterSpacing: "-0.01em" }}
@@ -200,3 +200,4 @@ export default function CertificatePage({ params }: { params: { wallet: string }
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
@@ -50,7 +50,7 @@ export default function ProfilePage({ params }: PageProps) {
   // Date joined: earliest verifiedAt
   const joinDate = proofs.length > 0
     ? formatDate(proofs.sort((a, b) => new Date(a.verifiedAt).getTime() - new Date(b.verifiedAt).getTime())[0].verifiedAt)
-    : '—';
+    : 'â€”';
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '80px 24px 60px' }}>
@@ -73,7 +73,7 @@ export default function ProfilePage({ params }: PageProps) {
               <AddressDisplay address={wallet} startChars={8} endChars={6} />
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ color: 'var(--success)', fontSize: '10px' }}>●</span>
+              <span style={{ color: 'var(--success)', fontSize: '10px' }}>â—</span>
               Rialo Devnet
             </p>
           </div>
@@ -174,3 +174,4 @@ export default function ProfilePage({ params }: PageProps) {
     </div>
   );
 }
+

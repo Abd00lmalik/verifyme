@@ -20,9 +20,9 @@ export function useProofSubmit(onSuccess?: () => void) {
     if (success !== "true" || !platform || !proofHash || !wallet) return;
     processed.current = true;
 
-    const proof = {
+    const proof: ProofRecord = {
       wallet,
-      platform,
+      platform: platform as Platform,
       proofHash,
       usernameHash: "",
       maskedUsername: maskedUsername || "",
@@ -49,3 +49,5 @@ export function useProofSubmit(onSuccess?: () => void) {
     onSuccess?.();
   }, [searchParams, onSuccess]);
 }
+
+
