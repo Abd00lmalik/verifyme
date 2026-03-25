@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useEffect, useState } from "react";
 import type { ProofRecord } from "@/lib/types";
 
@@ -12,7 +13,7 @@ function FarcasterIcon({ size = 16 }: { size?: number }) {
   return (<svg width={size} height={size} viewBox="0 0 24 24" fill="#855DCD"><path d="M11.996 0C5.372 0 0 5.372 0 11.996c0 6.625 5.372 12 11.996 12C18.625 24 24 18.625 24 11.996 24 5.372 18.625 0 11.996 0zm5.24 17.08h-2.2v-4.702c0-.972-.385-1.46-1.154-1.46-.848 0-1.271.512-1.271 1.46v2.516h-2.19v-2.516c0-.948-.424-1.46-1.271-1.46-.77 0-1.155.488-1.155 1.46V17.08h-2.2V9.723h2.2v.95c.476-.73 1.19-1.097 2.14-1.097.963 0 1.72.4 2.27 1.2.564-.8 1.38-1.2 2.44-1.2 1.8 0 2.39 1.25 2.39 3.13V17.08zM7.42 8.33c-.73 0-1.32-.59-1.32-1.32 0-.73.59-1.32 1.32-1.32.73 0 1.32.59 1.32 1.32 0 .73-.59 1.32-1.32 1.32zm9.15 0c-.73 0-1.32-.59-1.32-1.32 0-.73.59-1.32 1.32-1.32.73 0 1.32.59 1.32 1.32 0 .73-.59 1.32-1.32 1.32z"/></svg>);
 }
 
-const ICONS: Record<string, (p: { size?: number }) => JSX.Element> = { github: GitHubIcon, discord: DiscordIcon, farcaster: FarcasterIcon };
+const ICONS: Record<string, (p: { size?: number }) => React.ReactElement> = { github: GitHubIcon, discord: DiscordIcon, farcaster: FarcasterIcon };
 const COLORS: Record<string, string> = { github: "#7C3AED", discord: "#5865F2", farcaster: "#855DCD" };
 const NAMES: Record<string, string> = { github: "GitHub", discord: "Discord", farcaster: "Farcaster" };
 const PLATFORMS = ["github", "discord", "farcaster"];
