@@ -1,13 +1,11 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
-function sha256(input: string): string {
-  let hash = 0;
+function hash(input: string): string {
+  let h = 0;
   for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    h = ((h << 5) - h + input.charCodeAt(i)) | 0;
   }
-  return Math.abs(hash).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
+  return Math.abs(h).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
 }
 
 function maskUsername(username: string): string {
@@ -15,10 +13,9 @@ function maskUsername(username: string): string {
   return username.slice(0, 2) + "****" + username.slice(-2);
 }
 
-// Discord snowflake encodes creation timestamp
 function discordAccountCreated(id: string): string {
   try {
-    const ms = Math.floor(parseInt(id) / 4194304) + 1420070400000;
+    const ms = Math.floor(parseInt(id, 10) / 4194304) + 1420070400000;
     return new Date(ms).toISOString();
   } catch {
     return new Date().toISOString();
@@ -33,9 +30,10 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
-    let username = "mockuser";
-    let id = "123456789";
-    let avatar = "";
+    let username = "mockuser11";
+    let id = "123456789012345678";
+    let avatar = "https://cdn.discordapp.com/embed/avatars/0.png";
+    let serverCount = 8;
 
     if (!mock) {
       if (!code) throw new Error("No code provided");
@@ -54,34 +52,44 @@ export async function GET(req: NextRequest) {
       const tokenData = await tokenRes.json();
       if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
 
+      const token = String(tokenData.access_token || "");
+      if (!token) throw new Error("No Discord token");
+
       const userRes = await fetch("https://discord.com/api/users/@me", {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
       });
       const user = await userRes.json();
+
       username = user.username;
       id = user.id;
       avatar = user.avatar
         ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
         : `https://cdn.discordapp.com/embed/avatars/${Number(user.discriminator || 0) % 5}.png`;
-    }
 
-    const proofHash = sha256(wallet + id);
-    const usernameHash = sha256(username);
-    const maskedUsername = maskUsername(username);
-    const accountCreatedAt = discordAccountCreated(id);
+      const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (guildsRes.ok) {
+        const guilds = await guildsRes.json();
+        serverCount = Array.isArray(guilds) ? guilds.length : 0;
+      }
+    }
 
     const params = new URLSearchParams({
       success: "true",
       platform: "discord",
-      proofHash,
-      usernameHash,
-      maskedUsername,
+      proofHash: hash(wallet + id),
+      usernameHash: hash(username),
+      maskedUsername: maskUsername(username),
       pfpUrl: avatar,
-      accountCreatedAt,
+      accountCreatedAt: discordAccountCreated(id),
+      serverCount: String(serverCount),
       wallet,
     });
 
-    return NextResponse.redirect(`${appUrl}/verify?${params}`);
+    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.redirect(
@@ -89,4 +97,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

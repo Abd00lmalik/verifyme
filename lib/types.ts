@@ -1,11 +1,11 @@
-﻿export type Platform = 'github' | 'discord' | 'farcaster';
+﻿export type Platform = "github" | "discord" | "farcaster";
 
 export type VerificationStatus =
-  | 'unverified'
-  | 'pending'
-  | 'verified'
-  | 'error'
-  | 'revoking';
+  | "unverified"
+  | "pending"
+  | "verified"
+  | "error"
+  | "revoking";
 
 export interface ProofRecord {
   wallet: string;
@@ -16,7 +16,9 @@ export interface ProofRecord {
   verifiedAt: string;
   txSignature?: string;
   repoCount?: number;
+  commitCount?: number;
   followerCount?: number;
+  serverCount?: number;
   pfpUrl?: string;
   accountCreatedAt?: string;
 }
@@ -30,9 +32,7 @@ export interface VerificationState {
 
 export interface ToastItem {
   id: string;
-  type: 'success' | 'error' | 'warning';
+  type: "success" | "error" | "warning";
   title: string;
   message?: string;
 }
-
-

@@ -1,18 +1,43 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
-function sha256(input: string): string {
-  let hash = 0;
+function hash(input: string): string {
+  let h = 0;
   for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    h = ((h << 5) - h + input.charCodeAt(i)) | 0;
   }
-  return Math.abs(hash).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
+  return Math.abs(h).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
 }
 
 function maskUsername(username: string): string {
   if (!username || username.length <= 4) return username;
   return username.slice(0, 2) + "****" + username.slice(-2);
+}
+
+async function getCommitCount(login: string, token: string): Promise<number> {
+  try {
+    const res = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}/events/public?per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "VerifyMe",
+        Accept: "application/vnd.github+json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return 0;
+    const events = await res.json();
+    if (!Array.isArray(events)) return 0;
+
+    let commits = 0;
+    for (const ev of events) {
+      if (ev?.type === "PushEvent" && Array.isArray(ev?.payload?.commits)) {
+        commits += ev.payload.commits.length;
+      }
+    }
+    return commits;
+  } catch {
+    return 0;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -23,10 +48,11 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
-    let login = "mockuser23";
+    let login = "mockdev77";
     let id = 123456;
-    let public_repos = 47;
-    let avatar_url = "";
+    let publicRepos = 47;
+    let commitCount = 130;
+    let avatarUrl = "https://avatars.githubusercontent.com/u/9919?v=4";
 
     if (!mock) {
       if (!code) throw new Error("No code provided");
@@ -42,37 +68,41 @@ export async function GET(req: NextRequest) {
         }),
       });
       const tokenData = await tokenRes.json();
-      if (tokenData.error) throw new Error(tokenData.error_description);
+      if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+
+      const token = String(tokenData.access_token || "");
+      if (!token) throw new Error("No GitHub token");
 
       const userRes = await fetch("https://api.github.com/user", {
         headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
+          Authorization: `Bearer ${token}`,
           "User-Agent": "VerifyMe",
+          Accept: "application/vnd.github+json",
         },
+        cache: "no-store",
       });
       const user = await userRes.json();
+
       login = user.login;
       id = user.id;
-      public_repos = user.public_repos || 0;
-      avatar_url = user.avatar_url || "";
+      publicRepos = user.public_repos || 0;
+      avatarUrl = user.avatar_url || `https://avatars.githubusercontent.com/u/${id}?v=4`;
+      commitCount = await getCommitCount(login, token);
     }
-
-    const proofHash = sha256(wallet + String(id));
-    const usernameHash = sha256(login);
-    const maskedUsername = maskUsername(login);
 
     const params = new URLSearchParams({
       success: "true",
       platform: "github",
-      proofHash,
-      usernameHash,
-      maskedUsername,
-      pfpUrl: avatar_url,
+      proofHash: hash(wallet + String(id)),
+      usernameHash: hash(login),
+      maskedUsername: maskUsername(login),
+      pfpUrl: avatarUrl,
       wallet,
-      repoCount: String(public_repos),
+      repoCount: String(publicRepos),
+      commitCount: String(commitCount),
     });
 
-    return NextResponse.redirect(`${appUrl}/verify?${params}`);
+    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.redirect(

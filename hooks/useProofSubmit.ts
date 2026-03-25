@@ -18,7 +18,9 @@ export function useProofSubmit(onSuccess?: () => void) {
     const maskedUsername = searchParams.get("maskedUsername");
     const wallet = searchParams.get("wallet") || localStorage.getItem("verifyme_pending_wallet");
     const repoCount = searchParams.get("repoCount");
+    const commitCount = searchParams.get("commitCount");
     const followerCount = searchParams.get("followerCount");
+    const serverCount = searchParams.get("serverCount");
     const pfpUrl = searchParams.get("pfpUrl") || "";
     const accountCreatedAt = searchParams.get("accountCreatedAt") || "";
 
@@ -33,7 +35,9 @@ export function useProofSubmit(onSuccess?: () => void) {
       maskedUsername: maskedUsername || "",
       verifiedAt: new Date().toISOString(),
       ...(repoCount ? { repoCount: parseInt(repoCount, 10) } : {}),
+      ...(commitCount ? { commitCount: parseInt(commitCount, 10) } : {}),
       ...(followerCount ? { followerCount: parseInt(followerCount, 10) } : {}),
+      ...(serverCount ? { serverCount: parseInt(serverCount, 10) } : {}),
       ...(pfpUrl ? { pfpUrl } : {}),
       ...(accountCreatedAt ? { accountCreatedAt } : {}),
     };
@@ -55,9 +59,11 @@ export function useProofSubmit(onSuccess?: () => void) {
       "maskedUsername",
       "wallet",
       "repoCount",
+      "commitCount",
       "followerCount",
+      "serverCount",
       "pfpUrl",
-      "accountCreatedAt"
+      "accountCreatedAt",
     ].forEach((k) => url.searchParams.delete(k));
     window.history.replaceState({}, "", url.toString());
 
