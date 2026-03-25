@@ -1,45 +1,46 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { proofStore } from "@/lib/proof-store";
+import { NextRequest, NextResponse } from "next/server";
+import { Redis } from "@upstash/redis";
 import type { ProofRecord } from "@/lib/types";
 
+const redis = Redis.fromEnv();
+
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const wallet = searchParams.get("wallet");
-  if (!wallet) return NextResponse.json([], { status: 200 });
-  return NextResponse.json(proofStore.get(wallet) || []);
+  const wallet = req.nextUrl.searchParams.get("wallet");
+  if (!wallet) return NextResponse.json({ proofs: [] });
+  try {
+    const proofs = await redis.lrange<ProofRecord>(`proofs:${wallet}`, 0, -1);
+    return NextResponse.json({ proofs: proofs || [] });
+  } catch {
+    return NextResponse.json({ proofs: [] });
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const {
-      wallet, platform, proofHash, usernameHash, maskedUsername,
-      txSignature, repoCount, followerCount, pfpUrl, accountCreatedAt,
-    } = body;
-
+    const { wallet, platform, proofHash, usernameHash, maskedUsername, repoCount, followerCount } = body;
     if (!wallet || !platform || !proofHash) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
     }
-
-    const existing = proofStore.get(wallet) || [];
-    const filtered = existing.filter((p) => p.platform !== platform);
-
     const proof: ProofRecord = {
       wallet, platform, proofHash,
       usernameHash: usernameHash || "",
       maskedUsername: maskedUsername || "",
       verifiedAt: new Date().toISOString(),
-      ...(txSignature && { txSignature }),
       ...(repoCount !== undefined && { repoCount: Number(repoCount) }),
       ...(followerCount !== undefined && { followerCount: Number(followerCount) }),
-      ...(pfpUrl && { pfpUrl }),
-      ...(accountCreatedAt && { accountCreatedAt }),
     };
-
-    proofStore.set(wallet, [...filtered, proof]);
+    const key = `proofs:${wallet}`;
+    const existing = await redis.lrange<ProofRecord>(key, 0, -1);
+    const filtered = (existing || []).filter((p: ProofRecord) => p.platform !== platform);
+    await redis.del(key);
+    if (filtered.length > 0) {
+      await redis.rpush(key, ...filtered);
+    }
+    await redis.rpush(key, proof);
     return NextResponse.json({ success: true, proof });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
   }
 }
 
@@ -47,12 +48,17 @@ export async function DELETE(req: NextRequest) {
   try {
     const { wallet, platform } = await req.json();
     if (!wallet || !platform) {
-      return NextResponse.json({ error: "Missing wallet or platform" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
     }
-    const existing = proofStore.get(wallet) || [];
-    proofStore.set(wallet, existing.filter((p) => p.platform !== platform));
+    const key = `proofs:${wallet}`;
+    const existing = await redis.lrange<ProofRecord>(key, 0, -1);
+    const filtered = (existing || []).filter((p: ProofRecord) => p.platform !== platform);
+    await redis.del(key);
+    if (filtered.length > 0) {
+      await redis.rpush(key, ...filtered);
+    }
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ success: false, error: String(e) }, { status: 500 });
   }
 }
