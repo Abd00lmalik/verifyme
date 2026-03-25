@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 import { useEffect, useState } from "react";
 import type { ProofRecord } from "@/lib/types";
@@ -73,7 +73,7 @@ export default function CertificatePage({ params }: { params: { wallet: string }
           <h1 style={{ fontSize: "28px", fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.02em", marginBottom: "6px", lineHeight: 1.2 }}>
             {isFullyVerified ? "Fully Verified Builder" : count > 0 ? count + " of 3 Verified" : "No Verifications Yet"}
           </h1>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>On-chain identity certificate · Non-transferable</p>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>On-chain identity certificate Â· Non-transferable</p>
         </div>
 
         <div style={{ position: "relative", borderRadius: "24px", overflow: "hidden", background: "linear-gradient(145deg, #0A0F1E 0%, #0D1520 40%, #0A0E1A 100%)", border: "1px solid rgba(92,225,230,0.2)", boxShadow: "0 0 0 1px rgba(255,255,255,0.03), 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(92,225,230,0.1)" }}>
@@ -86,7 +86,7 @@ export default function CertificatePage({ params }: { params: { wallet: string }
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
                   <span style={{ fontSize: "18px", color: "#5CE1E6", fontWeight: 700 }}>VM</span>
-                  <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>·</span>
+                  <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Â·</span>
                   <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: 500 }}>VerifyMe</span>
                 </div>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "monospace" }}>IDENTITY CERTIFICATE</span>
@@ -129,11 +129,11 @@ export default function CertificatePage({ params }: { params: { wallet: string }
                       </div>
                       {verified ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "4px", background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: "20px", padding: "2px 8px" }}>
-                          <span style={{ fontSize: "10px", color: "#34D399" }}>✓</span>
+                          <span style={{ fontSize: "10px", color: "#34D399" }}>âœ“</span>
                           <span style={{ fontSize: "11px", color: "#34D399", fontWeight: 600 }}>Verified</span>
                         </div>
                       ) : (
-                        <div style={{ fontSize: "11px", color: "var(--text-muted)", opacity: 0.5 }}>—</div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)", opacity: 0.5 }}>â€”</div>
                       )}
                     </div>
                   );
@@ -164,11 +164,11 @@ export default function CertificatePage({ params }: { params: { wallet: string }
 
           <div style={{ background: "rgba(92,225,230,0.04)", borderTop: "1px solid rgba(92,225,230,0.1)", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "2px" }}>Proof of identity · Non-transferable</div>
-              <div style={{ fontSize: "10px", fontFamily: "monospace", color: "rgba(92,225,230,0.5)" }}>verifyme.rialo · ERC-5192 Soulbound</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "2px" }}>Proof of identity Â· Non-transferable</div>
+              <div style={{ fontSize: "10px", fontFamily: "monospace", color: "rgba(92,225,230,0.5)" }}>verifyme.rialo Â· ERC-5192 Soulbound</div>
             </div>
             <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(92,225,230,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "16px", color: "#5CE1E6", fontWeight: 700 }}>✓</span>
+              <span style={{ fontSize: "16px", color: "#5CE1E6", fontWeight: 700 }}>âœ“</span>
             </div>
           </div>
         </div>
@@ -177,7 +177,8 @@ export default function CertificatePage({ params }: { params: { wallet: string }
 
 
           
-            href={"https://twitter.com/intent/tweet?text=" + encodeURIComponent("Just verified my builder identity on-chain using @VerifyMe — built on @RialoProtocol. " + count + "/3 identities cryptographically proven. No personal data stored. Just proof.\n\nThis is what Web3 identity should look like 🔐") + "&url=" + tweetUrl}
+          <a
+            href={"https://twitter.com/intent/tweet?text=" + encodeURIComponent("Just verified my builder identity on-chain using @VerifyMe â€” built on @RialoProtocol. " + count + "/3 identities cryptographically proven. No personal data stored. Just proof.\n\nThis is what Web3 identity should look like ðŸ”") + "&url=" + tweetUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", height: "48px", borderRadius: "12px", background: "#000", border: "1px solid #2a2a2a", color: "#fff", fontSize: "14px", fontWeight: 600, textDecoration: "none", letterSpacing: "-0.01em" }}
@@ -186,12 +187,12 @@ export default function CertificatePage({ params }: { params: { wallet: string }
             Share on X
           </a>
           <button onClick={copyLink} style={{ width: "100%", height: "42px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border-default)", color: copied ? "var(--success)" : "var(--text-secondary)", fontSize: "13px", fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
-            {copied ? "✓ Copied!" : "Copy link"}
+            {copied ? "âœ“ Copied!" : "Copy link"}
           </button>
 
           <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "4px" }}>
-            <a href={"/profile/" + wallet} style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none" }}>View profile →</a>
-            <a href="/verify" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none" }}>Dashboard →</a>
+            <a href={"/profile/" + wallet} style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none" }}>View profile â†’</a>
+            <a href="/verify" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none" }}>Dashboard â†’</a>
           </div>
         </div>
 
