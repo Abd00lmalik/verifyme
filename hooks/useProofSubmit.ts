@@ -1,4 +1,5 @@
-﻿"use client";
+﻿import type { Platform, ProofRecord } from "@/lib/types";
+"use client";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { saveProofToStorage } from "./useVerifications";
@@ -49,5 +50,6 @@ export function useProofSubmit(onSuccess?: () => void) {
     onSuccess?.();
   }, [searchParams, onSuccess]);
 }
+
 
 
