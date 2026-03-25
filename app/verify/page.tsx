@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Suspense, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -243,6 +243,11 @@ function VerifyDashboard() {
                 {linkCopied ? "Copied!" : "Copy profile link"}
               </button>
               {verifiedCount > 0 && (
+                <a href={`/certificate/${wallet}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", height: "38px", borderRadius: "10px", fontSize: "14px", fontWeight: 500, background: "var(--accent)", color: "var(--text-inverse)", border: "none", textDecoration: "none" }} className="btn-primary">
+                  ✓ View Certificate
+                </a>
+              )}
+              {verifiedCount > 0 && (
                 <button onClick={handleDisconnectAll} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", height: "38px", borderRadius: "10px", fontSize: "14px", fontWeight: 500, background: "transparent", color: "var(--error, #f87171)", border: "1px solid rgba(248,113,113,0.3)", cursor: "pointer", fontFamily: "inherit" }}>
                   <LogOut size={13} />
                   Disconnect all
@@ -280,6 +285,19 @@ function VerifyDashboard() {
               />
             )}
 
+            {verifiedCount > 0 && (
+              <div style={{ marginTop: "24px", background: "linear-gradient(135deg, #0D1117 0%, #0E1520 100%)", border: "1px solid rgba(92,225,230,0.25)", borderRadius: "14px", padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                    {verifiedCount === 3 ? "🎉 Fully Verified Builder" : `${verifiedCount} of 3 platforms verified`}
+                  </p>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Share your certificate with the world</p>
+                </div>
+                <a href={`/certificate/${wallet}`} style={{ flexShrink: 0, height: "38px", padding: "0 16px", borderRadius: "10px", background: "var(--accent)", color: "var(--text-inverse)", fontSize: "14px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>
+                  View Certificate →
+                </a>
+              </div>
+            )}
             <div style={{ marginTop: "32px" }}>
               <h3 style={{ fontSize: "16px", fontWeight: 500, letterSpacing: "-0.01em", color: "var(--text-primary)", marginBottom: "4px" }}>Proof Badge</h3>
               <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "16px" }}>Embed this badge on your website or share your profile link.</p>
