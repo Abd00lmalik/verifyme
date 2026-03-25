@@ -30,7 +30,7 @@ export default function ProfilePage({ params }: PageProps) {
   useEffect(() => {
     fetch(`/api/proof?wallet=${wallet}`)
       .then((r) => r.json())
-      .then((data) => setProofs(Array.isArray(data) ? data : []))
+      .then((data) => setProofs(data.proofs || []))
       .catch(() => setProofs([]))
       .finally(() => setIsLoading(false));
   }, [wallet]);
