@@ -93,7 +93,7 @@ export function Hero() {
             }}
             className="btn-primary"
           >
-            Get Verified ->
+            Get Verified {'->'}
           </Link>
 
           <Link
@@ -122,3 +122,4 @@ export function Hero() {
     </section>
   );
 }
+
