@@ -1,10 +1,10 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
+const APP_URL = "https://verifyme-two.vercel.app";
+
 function hash(input: string): string {
   let h = 0;
-  for (let i = 0; i < input.length; i++) {
-    h = ((h << 5) - h + input.charCodeAt(i)) | 0;
-  }
+  for (let i = 0; i < input.length; i++) h = ((h << 5) - h + input.charCodeAt(i)) | 0;
   return Math.abs(h).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
 }
 
@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
   const wallet = searchParams.get("state") || searchParams.get("wallet") || "unknown";
   const mock = searchParams.get("mock");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
     let username = "mockuser11";
@@ -46,9 +45,10 @@ export async function GET(req: NextRequest) {
           client_secret: process.env.DISCORD_CLIENT_SECRET || "",
           grant_type: "authorization_code",
           code,
-          redirect_uri: process.env.DISCORD_REDIRECT_URI || `${appUrl}/api/discord/callback`,
+          redirect_uri: process.env.DISCORD_REDIRECT_URI || `${APP_URL}/api/discord/callback`,
         }),
       });
+
       const tokenData = await tokenRes.json();
       if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
 
@@ -89,11 +89,11 @@ export async function GET(req: NextRequest) {
       wallet,
     });
 
-    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
+    return NextResponse.redirect(`${APP_URL}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.redirect(
-      `${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`
+      `${APP_URL}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`
     );
   }
 }

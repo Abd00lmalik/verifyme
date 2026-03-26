@@ -1,10 +1,10 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 
+const APP_URL = "https://verifyme-two.vercel.app";
+
 function hash(input: string): string {
   let h = 0;
-  for (let i = 0; i < input.length; i++) {
-    h = ((h << 5) - h + input.charCodeAt(i)) | 0;
-  }
+  for (let i = 0; i < input.length; i++) h = ((h << 5) - h + input.charCodeAt(i)) | 0;
   return Math.abs(h).toString(16).padStart(8, "0").repeat(8).slice(0, 64);
 }
 
@@ -23,7 +23,6 @@ async function getCommitCount(login: string, token: string): Promise<number> {
       },
       cache: "no-store",
     });
-
     if (!res.ok) return 0;
     const events = await res.json();
     if (!Array.isArray(events)) return 0;
@@ -45,7 +44,6 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
   const wallet = searchParams.get("state") || searchParams.get("wallet") || "unknown";
   const mock = searchParams.get("mock");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   try {
     let login = "mockdev77";
@@ -64,7 +62,7 @@ export async function GET(req: NextRequest) {
           client_id: process.env.GITHUB_CLIENT_ID,
           client_secret: process.env.GITHUB_CLIENT_SECRET,
           code,
-          redirect_uri: process.env.GITHUB_REDIRECT_URI,
+          redirect_uri: process.env.GITHUB_REDIRECT_URI || `${APP_URL}/api/github/callback`,
         }),
       });
       const tokenData = await tokenRes.json();
@@ -85,7 +83,7 @@ export async function GET(req: NextRequest) {
 
       login = user.login;
       id = user.id;
-      publicRepos = user.public_repos || 0;
+      publicRepos = Number(user.public_repos || 0);
       avatarUrl = user.avatar_url || `https://avatars.githubusercontent.com/u/${id}?v=4`;
       commitCount = await getCommitCount(login, token);
     }
@@ -102,11 +100,11 @@ export async function GET(req: NextRequest) {
       commitCount: String(commitCount),
     });
 
-    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
+    return NextResponse.redirect(`${APP_URL}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.redirect(
-      `${appUrl}/verify?error=true&platform=github&message=${encodeURIComponent(msg)}`
+      `${APP_URL}/verify?error=true&platform=github&message=${encodeURIComponent(msg)}`
     );
   }
 }
