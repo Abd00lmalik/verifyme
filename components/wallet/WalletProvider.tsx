@@ -1,17 +1,25 @@
-'use client';
+"use client";
 
-import { FC, ReactNode } from 'react';
-import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
+import { FC, ReactNode, useMemo } from "react";
+import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from "@solana/wallet-adapter-react";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { BackpackWalletAdapter, PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl } from "@solana/web3.js";
 
-interface Props { children: ReactNode; }
+interface Props {
+  children: ReactNode;
+}
 
 const WalletProvider: FC<Props> = ({ children }) => {
-  const endpoint = process.env.NEXT_PUBLIC_RIALO_RPC_URL || clusterApiUrl('devnet');
+  const endpoint = process.env.NEXT_PUBLIC_RIALO_RPC_URL || clusterApiUrl("devnet");
+  const wallets = useMemo(
+    () => [new PhantomWalletAdapter(), new BackpackWalletAdapter(), new SolflareWalletAdapter()],
+    []
+  );
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <SolanaWalletProvider wallets={[]} autoConnect={true}>
+      <SolanaWalletProvider wallets={wallets} autoConnect={true}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>
@@ -19,3 +27,4 @@ const WalletProvider: FC<Props> = ({ children }) => {
 };
 
 export default WalletProvider;
+

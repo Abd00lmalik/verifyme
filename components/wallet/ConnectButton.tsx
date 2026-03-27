@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { ChevronDown, LogOut, Copy, ExternalLink } from 'lucide-react';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { clearStoredWalletProof } from '@/hooks/useWalletProof';
 import { truncateAddress, generateAvatarColor } from '@/lib/utils';
 
 export function ConnectButton() {
@@ -179,6 +180,7 @@ export function ConnectButton() {
           <button
             onClick={() => {
               disconnect();
+              clearStoredWalletProof(address);
               setDropdownOpen(false);
             }}
             style={{

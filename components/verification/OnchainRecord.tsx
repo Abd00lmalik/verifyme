@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { Button } from '@/components/ui/Button';
-import { EXPLORER_URL } from '@/lib/constants';
+import { CONTRACT_ADDRESS, EXPLORER_URL } from '@/lib/constants';
 import { truncateAddress, formatDate } from '@/lib/utils';
 import type { ProofRecord } from '@/lib/types';
 
@@ -10,8 +10,11 @@ interface OnchainRecordProps {
   proofs: ProofRecord[];
 }
 
-const CONTRACT_DISPLAY = 'RmeW7x...K9pq';
-const LATEST_BLOCK = '148,392';
+const CONTRACT_DISPLAY =
+  CONTRACT_ADDRESS === 'PLACEHOLDER_RIALO_CONTRACT'
+    ? 'Not set'
+    : `${CONTRACT_ADDRESS.slice(0, 4)}...${CONTRACT_ADDRESS.slice(-4)}`;
+const LATEST_BLOCK = 'Pending';
 
 export function OnchainRecord({ wallet, proofs }: OnchainRecordProps) {
   const latestProof = proofs.sort(

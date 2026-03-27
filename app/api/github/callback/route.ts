@@ -1,7 +1,5 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { computeProofHash, computeUsernameHash } from "@/lib/proof-hash";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://verifyme-two.vercel.app";
 
 function maskUsername(username: string): string {
   if (!username || username.length <= 4) return username;
@@ -34,6 +32,7 @@ async function getCommitCount(login: string, token: string): Promise<number> {
 }
 
 export async function GET(req: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const wallet = searchParams.get("state") || searchParams.get("wallet");
@@ -49,7 +48,7 @@ export async function GET(req: NextRequest) {
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
-        redirect_uri: process.env.GITHUB_REDIRECT_URI || `${APP_URL}/api/github/callback`,
+        redirect_uri: process.env.GITHUB_REDIRECT_URI || `${appUrl}/api/github/callback`,
       }),
     });
 
@@ -89,9 +88,10 @@ export async function GET(req: NextRequest) {
       commitCount: String(commitCount),
     });
 
-    return NextResponse.redirect(`${APP_URL}/verify?${params.toString()}`);
+    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.redirect(`${APP_URL}/verify?error=true&platform=github&message=${encodeURIComponent(msg)}`);
+    return NextResponse.redirect(`${appUrl}/verify?error=true&platform=github&message=${encodeURIComponent(msg)}`);
   }
 }
+

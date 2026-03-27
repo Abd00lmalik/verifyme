@@ -1,11 +1,8 @@
-﻿import Link from "next/link";
-import { Redis } from "@upstash/redis";
+import Link from "next/link";
 import type { ProofRecord } from "@/lib/types";
-import { cardIdFromWallet } from "@/lib/card-id";
+import { resolveWalletFromCardId, getProofs, getIdentityRoot } from "@/lib/server/proof-storage";
 
 export const dynamic = "force-dynamic";
-
-const redis = Redis.fromEnv();
 
 function shortWallet(wallet: string): string {
   return wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : "";
@@ -18,22 +15,6 @@ function fmtDate(iso?: string): string {
   } catch {
     return iso;
   }
-}
-
-async function resolveWalletFromCardId(cardId: string): Promise<string | null> {
-  const cached = await redis.get<string>(`card:${cardId}`);
-  if (cached) return cached;
-
-  const keys = (await redis.keys("proofs:*")) as string[];
-  for (const key of keys || []) {
-    const wallet = String(key).replace(/^proofs:/, "");
-    if (cardIdFromWallet(wallet) === cardId) {
-      await redis.set(`card:${cardId}`, wallet);
-      return wallet;
-    }
-  }
-
-  return null;
 }
 
 export default async function CardPage({ params }: { params: { cardId: string } }) {
@@ -51,8 +32,8 @@ export default async function CardPage({ params }: { params: { cardId: string } 
     );
   }
 
-  const proofs = (await redis.lrange<ProofRecord>(`proofs:${wallet}`, 0, -1)) || [];
-  const identityRoot = (await redis.get<string>(`root:${wallet}`)) || "-";
+  const proofs = (await getProofs(wallet)) as ProofRecord[];
+  const identityRoot = (await getIdentityRoot(wallet)) || "-";
   const issueDate = proofs.length > 0 ? fmtDate(proofs[proofs.length - 1].verifiedAt) : "-";
 
   const has = new Set(proofs.map((p) => p.platform));
@@ -123,3 +104,4 @@ export default async function CardPage({ params }: { params: { cardId: string } 
     </div>
   );
 }
+

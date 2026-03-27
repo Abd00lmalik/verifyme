@@ -35,3 +35,10 @@ export function formatProofHash(hash: string): string {
   const clean = hash.replace(/^0x/, '');
   return `0x${clean.slice(0, 4)}...${clean.slice(-4)}`;
 }
+
+export function formatTxSignature(sig: string): string {
+  if (!sig) return '';
+  const clean = sig.replace(/^0x/, '');
+  if (clean.length <= 10) return clean;
+  return `${clean.slice(0, 4)}...${clean.slice(-4)}`;
+}
