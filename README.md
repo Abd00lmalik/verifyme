@@ -1,4 +1,4 @@
-# VerifyMe — Decentralized Social Proof Registry on Rialo
+# VerifyMe â€” Decentralized Social Proof Registry on Rialo
 
 VerifyMe lets anyone prove they control GitHub, Discord, and Farcaster accounts from a Solana-compatible wallet without exposing personal data. The app stores privacy-preserving proof hashes and shows a public profile, badge, and VM Card.
 
@@ -131,7 +131,7 @@ cp .env.local.example .env.local
 # Fill in OAuth + Redis values
 npm run dev
 ```
-Visit http://localhost:3000
+Visit[ https://verifyme-two.vercel.app ]
 
 ## Rialo integration status
 Ready to swap storage to on-chain when devnet access is granted.
