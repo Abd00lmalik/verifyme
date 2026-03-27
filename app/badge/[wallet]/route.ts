@@ -1,11 +1,9 @@
 ﻿import { NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
 import type { ProofRecord } from "@/lib/types";
+import { getProofs } from "@/lib/server/proof-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const redis = Redis.fromEnv();
 
 function escapeHtml(input: string): string {
   return input
@@ -23,7 +21,7 @@ function shortWallet(wallet: string): string {
 
 export async function GET(_req: Request, context: { params: { wallet: string } }) {
   const wallet = context.params.wallet;
-  const proofs = (await redis.lrange<ProofRecord>(`proofs:${wallet}`, 0, -1)) || [];
+  const proofs = (await getProofs(wallet)) as ProofRecord[];
   const map = new Set(proofs.map((p) => p.platform));
 
   const rows = [

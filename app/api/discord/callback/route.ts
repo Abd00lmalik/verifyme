@@ -1,7 +1,5 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { computeProofHash, computeUsernameHash } from "@/lib/proof-hash";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://verifyme-two.vercel.app";
 
 function maskUsername(username: string): string {
   if (!username || username.length <= 4) return username;
@@ -18,6 +16,7 @@ function discordAccountCreated(id: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const wallet = searchParams.get("state") || searchParams.get("wallet");
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest) {
         client_secret: process.env.DISCORD_CLIENT_SECRET || "",
         grant_type: "authorization_code",
         code,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI || `${APP_URL}/api/discord/callback`,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI || `${appUrl}/api/discord/callback`,
       }),
     });
 
@@ -80,9 +79,10 @@ export async function GET(req: NextRequest) {
       wallet,
     });
 
-    return NextResponse.redirect(`${APP_URL}/verify?${params.toString()}`);
+    return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.redirect(`${APP_URL}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
+    return NextResponse.redirect(`${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
   }
 }
+

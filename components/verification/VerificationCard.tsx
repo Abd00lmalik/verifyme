@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Modal } from "@/components/ui/Modal";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { formatDate, formatProofHash } from "@/lib/utils";
+import { formatDate, formatProofHash, formatTxSignature } from "@/lib/utils";
 import { EXPLORER_URL } from "@/lib/constants";
 import type { Platform, VerificationState } from "@/lib/types";
 
@@ -59,7 +59,7 @@ interface VerificationCardProps {
   onRevoke?: (platform: Platform) => Promise<void>;
   onUpdate?: (platform: Platform) => void;
   onConnect?: (platform: Platform) => void;
-  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; signature: string }) => void;
+  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; message: string; signature: string; nonce: string; domain: string; pfpUrl?: string }) => void;
 }
 
 export function VerificationCard({ state, wallet, readOnly = false, onRevoke, onUpdate, onConnect, onFarcasterConnect }: VerificationCardProps) {
@@ -71,6 +71,10 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
   const { copy, copied } = useCopyToClipboard();
 
   const handleConnect = useCallback(() => {
+    if (onConnect) {
+      onConnect(platform);
+      return;
+    }
     if (platform === "github") {
       localStorage.setItem("verifyme_pending_wallet", wallet);
       window.location.href = `/api/github?wallet=${wallet}`;
@@ -78,7 +82,7 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
       localStorage.setItem("verifyme_pending_wallet", wallet);
       window.location.href = `/api/discord?wallet=${wallet}`;
     }
-  }, [platform, wallet]);
+  }, [platform, wallet, onConnect]);
 
   const handleRevoke = useCallback(async () => {
     setRevoking(true);
@@ -185,9 +189,13 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
             {/* Actions */}
             {!readOnly && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px" }}>
-                <a href={`${EXPLORER_URL}/tx/${proof.txSignature || "mock"}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "12px", color: "var(--accent-text)", display: "flex", alignItems: "center", gap: "4px" }}>
-                  View on Explorer <ExternalLink size={11} />
-                </a>
+                {proof.txSignature && !String(proof.txSignature).startsWith("offchain:") ? (
+                  <a href={`${EXPLORER_URL}/tx/${proof.txSignature}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "12px", color: "var(--accent-text)", display: "flex", alignItems: "center", gap: "4px" }}>
+                    View on Explorer <ExternalLink size={11} />
+                  </a>
+                ) : (
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Off-chain (pending Rialo)</span>
+                )}
                 <button
                   onClick={() => onUpdate?.(platform)}
                   style={{ fontSize: "12px", color: "var(--text-secondary)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: "4px" }}
@@ -197,6 +205,11 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
                 <button onClick={() => setShowRevokeModal(true)} className="revoke-btn" style={{ fontSize: "12px", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: "4px" }}>
                   <Unlink size={11} /> Disconnect
                 </button>
+              </div>
+            )}
+            {!readOnly && (
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                Tx: {proof.txSignature ? formatTxSignature(proof.txSignature) : "pending"}
               </div>
             )}
           </div>

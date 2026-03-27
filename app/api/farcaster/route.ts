@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { computeProofHash, computeUsernameHash } from "@/lib/proof-hash";
+import { createAppClient, viemConnector } from "@farcaster/auth-client";
 
 function maskUsername(username: string): string {
   if (!username || username.length <= 2) return username;
@@ -9,14 +10,39 @@ function maskUsername(username: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { wallet, fid, username } = body;
+    const { wallet, fid, username, message, signature, nonce, domain, pfpUrl } = body;
 
-    if (!wallet || !fid || !username) {
+    if (!wallet || !fid || !username || !message || !signature || !nonce || !domain) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const expectedDomain = new URL(process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).host;
+    if (String(domain).toLowerCase() !== expectedDomain.toLowerCase()) {
+      return NextResponse.json({ error: "Invalid Farcaster domain" }, { status: 400 });
+    }
+
+    const appClient = createAppClient({
+      relay: process.env.NEXT_PUBLIC_FARCASTER_RELAY_URL || "https://relay.farcaster.xyz",
+      ethereum: viemConnector({ rpcUrl: process.env.FARCASTER_RPC_URL }),
+    });
+
+    const verify = await appClient.verifySignInMessage({
+      nonce: String(nonce),
+      domain: String(domain),
+      message: String(message),
+      signature: String(signature),
+    });
+
+    if (verify.isError || !verify.success) {
+      return NextResponse.json({ error: "Invalid Farcaster signature" }, { status: 401 });
+    }
+
+    if (Number(verify.fid) !== Number(fid)) {
+      return NextResponse.json({ error: "Farcaster FID mismatch" }, { status: 401 });
+    }
+
     let followerCount = 0;
-    let pfpUrl = "";
+    let resolvedPfp = String(pfpUrl || "");
 
     try {
       const res = await fetch(`https://api.warpcast.com/v2/user?fid=${encodeURIComponent(String(fid))}`, {
@@ -26,7 +52,7 @@ export async function POST(req: NextRequest) {
       if (res.ok) {
         const data = await res.json();
         followerCount = Number(data?.result?.user?.followerCount || 0);
-        pfpUrl = String(data?.result?.user?.pfp?.url || "");
+        resolvedPfp = String(data?.result?.user?.pfp?.url || resolvedPfp || "");
       }
     } catch {}
 
@@ -36,7 +62,7 @@ export async function POST(req: NextRequest) {
       proofHash: computeProofHash({ wallet: String(wallet), platform: "farcaster", platformUserId: String(fid) }),
       usernameHash: computeUsernameHash({ platform: "farcaster", username: String(username) }),
       maskedUsername: maskUsername(String(username)),
-      pfpUrl,
+      pfpUrl: resolvedPfp,
       followerCount,
     });
   } catch {

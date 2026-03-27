@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ProofRecord } from "@/lib/types";
-
-const APP_URL = "https://verifyme-two.vercel.app";
+import { APP_URL } from "@/lib/constants";
+import { cardIdFromWallet } from "@/lib/card-id";
 const ORDER = ["github", "discord", "farcaster"] as const;
 
 function shortWallet(wallet: string) {
@@ -19,15 +19,6 @@ function fmtDate(iso?: string) {
   }
 }
 
-function uniqueCardId(wallet: string) {
-  let h = 2166136261;
-  for (let i = 0; i < wallet.length; i++) {
-    h ^= wallet.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-  }
-  const code = (h >>> 0).toString(36).toUpperCase().padStart(8, "0");
-  return `VM-${code}-${wallet.slice(-4).toUpperCase()}`;
-}
 
 function monthsSince(iso?: string) {
   if (!iso) return 0;
@@ -135,7 +126,7 @@ export default function CertificatePage({ params }: { params: { wallet: string }
 
   const score = useMemo(() => computeScore(proofs), [proofs]);
   const issueDate = proofs.length > 0 ? fmtDate(proofs[proofs.length - 1].verifiedAt) : fmtDate(new Date().toISOString());
-  const cardId = useMemo(() => uniqueCardId(wallet), [wallet]);
+  const cardId = useMemo(() => cardIdFromWallet(wallet), [wallet]);
   const topProof = useMemo(() => proofs.find((p) => p.pfpUrl) || proofs[0], [proofs]);
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : `${APP_URL}/certificate/${wallet}`;

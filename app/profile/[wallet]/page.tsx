@@ -9,10 +9,10 @@ import { Divider } from "@/components/ui/Divider";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { generateAvatarColor } from "@/lib/utils";
+import { APP_URL } from "@/lib/constants";
 import { MOCK_WALLET, MOCK_PROOFS } from "@/lib/mock-data";
 import type { ProofRecord, VerificationState, Platform } from "@/lib/types";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://verifyme-two.vercel.app";
 const PLATFORMS: Platform[] = ["github", "discord", "farcaster"];
 
 interface PageProps {
