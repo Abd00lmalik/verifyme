@@ -7,7 +7,7 @@ import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { Divider } from "@/components/ui/Divider";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { APP_URL } from "@/lib/constants";
-import { POLICY_PRESETS } from "@/lib/policy";
+import { POLICY_PRESETS, type PolicyTokenPayload } from "@/lib/policy";
 import { createProofShareCode, formatProofHash, formatTxSignature } from "@/lib/utils";
 import type { ProofRecord } from "@/lib/types";
 
@@ -32,6 +32,13 @@ function VerifierDashboard() {
     reasons?: string[];
     accessToken?: string | null;
     expiresAt?: number | null;
+  } | null>(null);
+  const [tokenInput, setTokenInput] = useState("");
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenResult, setTokenResult] = useState<{
+    valid: boolean;
+    payload?: PolicyTokenPayload;
+    error?: string;
   } | null>(null);
 
   const { copy: copyRoot, copied: rootCopied } = useCopyToClipboard();
@@ -112,6 +119,34 @@ function VerifierDashboard() {
       setPolicyLoading(false);
     }
   }, [walletResult, policyId]);
+
+  const handleTokenVerify = useCallback(async () => {
+    const token = tokenInput.trim();
+    if (!token) {
+      setTokenResult({ valid: false, error: "Paste an access token first." });
+      return;
+    }
+
+    setTokenLoading(true);
+    setTokenResult(null);
+    try {
+      const res = await fetch("/api/policy/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, wallet: walletResult || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.valid) {
+        setTokenResult({ valid: false, error: data?.error || "Token invalid" });
+      } else {
+        setTokenResult({ valid: true, payload: data.payload });
+      }
+    } catch {
+      setTokenResult({ valid: false, error: "Token verification failed." });
+    } finally {
+      setTokenLoading(false);
+    }
+  }, [tokenInput, walletResult]);
 
   return (
     <div style={{ maxWidth: "880px", margin: "0 auto", padding: "96px 24px 80px" }}>
@@ -377,6 +412,86 @@ function VerifierDashboard() {
                         </p>
                       )}
                     </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Divider my="8px" />
+
+            <div>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>
+                Token Verification Demo (DAO Gate)
+              </p>
+              <div style={{ display: "grid", gap: "10px" }}>
+                <textarea
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="Paste access token here"
+                  style={{
+                    minHeight: "80px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--border-default)",
+                    background: "var(--bg-elevated)",
+                    color: "var(--text-primary)",
+                    padding: "10px 12px",
+                    fontFamily: "monospace",
+                    fontSize: "12px",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    onClick={handleTokenVerify}
+                    disabled={tokenLoading}
+                    style={{
+                      height: "36px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "var(--accent)",
+                      color: "var(--text-inverse)",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {tokenLoading ? "Verifying..." : "Verify token"}
+                  </button>
+                  {policyResult?.accessToken && (
+                    <button
+                      onClick={() => setTokenInput(policyResult.accessToken || "")}
+                      style={{
+                        height: "36px",
+                        padding: "0 12px",
+                        borderRadius: "10px",
+                        border: "1px solid var(--border-default)",
+                        background: "transparent",
+                        color: "var(--text-secondary)",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Use latest token
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {tokenResult && (
+                <div style={{ marginTop: "10px", border: "1px solid var(--border-subtle)", borderRadius: "12px", padding: "12px", background: "var(--bg-elevated)" }}>
+                  <p style={{ fontSize: "13px", color: tokenResult.valid ? "var(--success)" : "var(--error)", marginBottom: "6px" }}>
+                    {tokenResult.valid ? "Access granted" : "Access denied"}
+                  </p>
+                  {tokenResult.error && (
+                    <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{tokenResult.error}</p>
+                  )}
+                  {tokenResult.valid && tokenResult.payload && (
+                    <div style={{ marginTop: "6px", display: "grid", gap: "4px", fontSize: "12px", color: "var(--text-muted)" }}>
+                      <div>Wallet: {tokenResult.payload.wallet}</div>
+                      {tokenResult.payload.policy?.id && <div>Policy: {tokenResult.payload.policy.id}</div>}
+                      {tokenResult.payload.platforms?.length ? <div>Platforms: {tokenResult.payload.platforms.join(", ")}</div> : null}
+                      {tokenResult.payload.expiresAt && <div>Expires: {new Date(tokenResult.payload.expiresAt).toLocaleString()}</div>}
+                    </div>
                   )}
                 </div>
               )}
