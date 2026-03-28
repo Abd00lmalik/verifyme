@@ -7,13 +7,28 @@ export type VerificationStatus =
   | "error"
   | "revoking";
 
+export interface BindingProofRecord {
+  method: string;
+  algorithm: "HS256";
+  verifier: string;
+  issuedAt: string;
+  socialSessionId: string;
+  walletNonce: string;
+  walletSignature: string;
+  walletMessage: string;
+  token: string;
+}
+
 export interface ProofRecord {
   wallet: string;
   platform: Platform;
-  proofHash: string;
-  usernameHash: string;
-  maskedUsername: string;
+  userId: string;
+  username: string;
+  verified: boolean;
   verifiedAt: string;
+  proofMethod: string;
+  proofHash: string;
+  bindingProof: BindingProofRecord;
   txSignature?: string;
   repoCount?: number;
   commitCount?: number;
@@ -21,6 +36,9 @@ export interface ProofRecord {
   serverCount?: number;
   pfpUrl?: string;
   accountCreatedAt?: string;
+  // Legacy fields kept optional for backward compatibility with old data rows.
+  usernameHash?: string;
+  maskedUsername?: string;
 }
 
 export interface VerificationState {

@@ -65,35 +65,6 @@ function computeScore(proofs: ProofRecord[]) {
   };
 }
 
-function mergeProofs(serverProofs: ProofRecord[], localProofs: ProofRecord[]) {
-  const byPlatform: Record<string, ProofRecord | undefined> = {};
-  for (const p of serverProofs) byPlatform[p.platform] = p;
-
-  for (const p of localProofs) {
-    const ex = byPlatform[p.platform];
-    if (!ex) {
-      byPlatform[p.platform] = p;
-      continue;
-    }
-    byPlatform[p.platform] = {
-      ...ex,
-      repoCount: ex.repoCount ?? p.repoCount,
-      commitCount: ex.commitCount ?? p.commitCount,
-      followerCount: ex.followerCount ?? p.followerCount,
-      serverCount: ex.serverCount ?? p.serverCount,
-      pfpUrl: ex.pfpUrl || p.pfpUrl,
-      accountCreatedAt: ex.accountCreatedAt || p.accountCreatedAt,
-    };
-  }
-
-  const merged: ProofRecord[] = [];
-  for (const k of ORDER) {
-    const v = byPlatform[k];
-    if (v) merged.push(v);
-  }
-  return merged;
-}
-
 export default function CertificatePage({ params }: { params: { wallet: string } }) {
   const wallet = params.wallet;
   const [proofs, setProofs] = useState<ProofRecord[]>([]);
@@ -104,19 +75,14 @@ export default function CertificatePage({ params }: { params: { wallet: string }
     fetch("/api/proof?wallet=" + wallet, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
-        const serverProofs: ProofRecord[] = d?.proofs || [];
-        let localProofs: ProofRecord[] = [];
-        try {
-          localProofs = JSON.parse(localStorage.getItem("verifyme_proof_" + wallet) || "[]");
-        } catch {}
-        if (active) setProofs(mergeProofs(serverProofs, localProofs));
+        const serverProofs: ProofRecord[] = Array.isArray(d?.proofs) ? d.proofs : [];
+        const ordered = ORDER.map((p) => serverProofs.find((row) => row.platform === p)).filter(
+          (row): row is ProofRecord => !!row
+        );
+        if (active) setProofs(ordered);
       })
       .catch(() => {
-        let localProofs: ProofRecord[] = [];
-        try {
-          localProofs = JSON.parse(localStorage.getItem("verifyme_proof_" + wallet) || "[]");
-        } catch {}
-        if (active) setProofs(localProofs);
+        if (active) setProofs([]);
       });
 
     return () => {
@@ -220,7 +186,7 @@ export default function CertificatePage({ params }: { params: { wallet: string }
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 11, color: "#64748b" }}>Profile</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{topProof?.maskedUsername || shortWallet(wallet)}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{topProof?.username || shortWallet(wallet)}</div>
               </div>
 
               <div style={{ marginLeft: "auto", textAlign: "right", fontSize: 10, color: "#475569" }}>

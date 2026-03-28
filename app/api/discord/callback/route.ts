@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { computeProofHash, computeUsernameHash } from "@/lib/proof-hash";
+import {
+  consumeOAuthRequestSession,
+  issueVerifiedSocialSession,
+} from "@/lib/server/verification-session";
 
-function maskUsername(username: string): string {
-  if (!username || username.length <= 4) return username;
-  return username.slice(0, 2) + "****" + username.slice(-2);
-}
+export const runtime = "nodejs";
 
 function discordAccountCreated(id: string): string {
   try {
@@ -18,12 +18,17 @@ function discordAccountCreated(id: string): string {
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
   const { searchParams } = new URL(req.url);
-  const code = searchParams.get("code");
-  const wallet = searchParams.get("state") || searchParams.get("wallet");
+  const code = String(searchParams.get("code") || "").trim();
+  const state = String(searchParams.get("state") || "").trim();
 
   try {
-    if (!wallet) throw new Error("Missing wallet address");
+    if (!state) throw new Error("Missing OAuth session");
     if (!code) throw new Error("No code provided");
+
+    const oauthSession = await consumeOAuthRequestSession(state, "discord");
+    if (!oauthSession) {
+      throw new Error("Discord session expired. Please reconnect.");
+    }
 
     const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
@@ -33,12 +38,16 @@ export async function GET(req: NextRequest) {
         client_secret: process.env.DISCORD_CLIENT_SECRET || "",
         grant_type: "authorization_code",
         code,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI || `${appUrl}/api/discord/callback`,
+        redirect_uri:
+          process.env.DISCORD_REDIRECT_URI || `${appUrl}/api/discord/callback`,
       }),
+      cache: "no-store",
     });
 
     const tokenData = await tokenRes.json();
-    if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+    if (tokenData.error) {
+      throw new Error(tokenData.error_description || tokenData.error);
+    }
 
     const token = String(tokenData.access_token || "");
     if (!token) throw new Error("No Discord token");
@@ -47,15 +56,17 @@ export async function GET(req: NextRequest) {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
-
     const user = await userRes.json();
-    const username = String(user?.username || "");
-    const id = String(user?.id || "");
-    if (!username || !id) throw new Error("Discord user lookup failed");
+
+    const username = String(user?.username || "").trim();
+    const userId = String(user?.id || "").trim();
+    if (!username || !userId) throw new Error("Discord user lookup failed");
 
     const avatar = user?.avatar
       ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
-      : `https://cdn.discordapp.com/embed/avatars/${Number(user?.discriminator || 0) % 5}.png`;
+      : `https://cdn.discordapp.com/embed/avatars/${
+          Number(user?.discriminator || 0) % 5
+        }.png`;
 
     let serverCount = 0;
     const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
@@ -67,22 +78,29 @@ export async function GET(req: NextRequest) {
       serverCount = Array.isArray(guilds) ? guilds.length : 0;
     }
 
+    const verifiedSession = await issueVerifiedSocialSession({
+      wallet: oauthSession.wallet,
+      platform: "discord",
+      userId,
+      username,
+      proofMethod: "oauth+wallet-signature",
+      providerSessionId: oauthSession.id,
+      pfpUrl: avatar,
+      accountCreatedAt: discordAccountCreated(userId),
+      serverCount: Number.isFinite(serverCount) ? serverCount : 0,
+    });
+
     const params = new URLSearchParams({
       success: "true",
       platform: "discord",
-      proofHash: computeProofHash({ wallet, platform: "discord", platformUserId: id }),
-      usernameHash: computeUsernameHash({ platform: "discord", username }),
-      maskedUsername: maskUsername(username),
-      pfpUrl: avatar,
-      accountCreatedAt: discordAccountCreated(id),
-      serverCount: String(serverCount),
-      wallet,
+      session: verifiedSession.id,
     });
 
     return NextResponse.redirect(`${appUrl}/verify?${params.toString()}`);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.redirect(`${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(msg)}`);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.redirect(
+      `${appUrl}/verify?error=true&platform=discord&message=${encodeURIComponent(message)}`
+    );
   }
 }
-

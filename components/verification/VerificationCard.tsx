@@ -58,7 +58,7 @@ interface VerificationCardProps {
   onRevoke?: (platform: Platform) => Promise<void>;
   onUpdate?: (platform: Platform) => void;
   onConnect?: (platform: Platform) => void;
-  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; message: string; signature: string; nonce: string; domain: string; pfpUrl?: string }) => void;
+  onFarcasterConnect?: (data: { fid: number; username: string; custody: string; message: string; signature: string; nonce: string; domain: string; pfpUrl?: string }) => Promise<void> | void;
 }
 
 export function VerificationCard({ state, wallet, readOnly = false, onRevoke, onUpdate, onConnect, onFarcasterConnect }: VerificationCardProps) {
@@ -147,14 +147,17 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
                 <img src={proof.pfpUrl} alt="avatar" style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-default)", flexShrink: 0 }} />
               ) : (
                 <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 700, color: "#fff", flexShrink: 0, opacity: 0.8 }}>
-                  {proof.maskedUsername?.[0]?.toUpperCase() || "?"}
+                  {proof.username?.[0]?.toUpperCase() || "?"}
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", fontFamily: "monospace", marginBottom: "2px" }}>
-                  {proof.maskedUsername}
+                  {proof.username}
                 </p>
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                    ID {proof.userId}
+                  </span>
                   {platform === "github" && proof.repoCount !== undefined && (
                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{proof.repoCount} public repos</span>
                   )}
@@ -175,7 +178,7 @@ export function VerificationCard({ state, wallet, readOnly = false, onRevoke, on
 
             <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "10px 12px", marginBottom: "12px" }}>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>
-                This account is verified and ready for eligibility checks in DAOs, airdrops, and communities.
+                Proof method: {proof.proofMethod}. Wallet signature and provider verification were bound server-side.
               </p>
             </div>
 

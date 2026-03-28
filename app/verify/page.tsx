@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Lock, ExternalLink, Copy, LogOut } from "lucide-react";
-import { useVerifications, saveProofToStorage, removeProofFromStorage } from "@/hooks/useVerifications";
+import { useVerifications } from "@/hooks/useVerifications";
 import { useWalletProof, getStoredWalletProof } from "@/hooks/useWalletProof";
 import { useToast } from "@/hooks/useToast";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
@@ -50,18 +50,11 @@ function VerifyDashboard() {
     }
   }, [ensureWalletProof, showToast]);
 
-  // Handle OAuth callback params (GitHub + Discord redirects back here)
+  // Handle OAuth callback params (GitHub + Discord redirect back here with server-issued session token)
   useEffect(() => {
     const success = searchParams.get("success");
     const platform = searchParams.get("platform") as Platform | null;
-    const proofHash = searchParams.get("proofHash");
-    const usernameHash = searchParams.get("usernameHash");
-    const maskedUsername = searchParams.get("maskedUsername");
-    const pfpUrl = searchParams.get("pfpUrl") || "";
-    const accountCreatedAt = searchParams.get("accountCreatedAt") || "";
-    const repoCount = searchParams.get("repoCount");
-    const commitCount = searchParams.get("commitCount");
-    const serverCount = searchParams.get("serverCount");
+    const verificationToken = searchParams.get("session");
     const errorParam = searchParams.get("error");
 
     // Resolve wallet: prefer connected wallet, fall back to localStorage
@@ -74,7 +67,19 @@ function VerifyDashboard() {
       return;
     }
 
-    if (success === "true" && platform && proofHash && resolvedWallet) {
+    if (success === "true" && platform && !verificationToken) {
+      showToast("error", "Verification session missing", "Please reconnect the platform.");
+      router.replace("/verify");
+      return;
+    }
+
+    if (success === "true" && platform && verificationToken && !resolvedWallet) {
+      showToast("error", "Wallet missing", "Reconnect wallet and retry platform verification.");
+      router.replace("/verify");
+      return;
+    }
+
+    if (success === "true" && platform && verificationToken && resolvedWallet) {
       const walletProof = getStoredWalletProof(resolvedWallet);
       if (!walletProof) {
         showToast("error", "Wallet proof missing", "Please sign your wallet to finish verification.");
@@ -82,39 +87,37 @@ function VerifyDashboard() {
         return;
       }
 
-      const proof = {
-        wallet: resolvedWallet,
-        platform,
-        proofHash,
-        usernameHash: usernameHash || "",
-        maskedUsername: maskedUsername || "",
-        pfpUrl,
-        ...(repoCount !== null ? { repoCount: Number(repoCount) } : {}),
-        ...(commitCount !== null ? { commitCount: Number(commitCount) } : {}),
-        ...(serverCount !== null ? { serverCount: Number(serverCount) } : {}),
-        ...(accountCreatedAt ? { accountCreatedAt } : {}),
-        verifiedAt: new Date().toISOString(),
-      };
-
-      saveProofToStorage(resolvedWallet, proof);
-      localStorage.removeItem("verifyme_pending_wallet");
-
-      // Fire-and-forget server save
       fetch("/api/proof", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...proof, walletProof }),
-      }).catch(() => {});
-
-      refetch();
-      showToast(
-        "success",
-        `${platform.charAt(0).toUpperCase() + platform.slice(1)} Verified!`,
-        "Your identity is now on-chain."
-      );
-
-      // Clean URL so refreshing doesn't re-trigger
-      router.replace("/verify");
+        body: JSON.stringify({
+          wallet: resolvedWallet,
+          platform,
+          verificationToken,
+          walletProof,
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok || !data?.success) {
+            throw new Error(data?.error || "Could not save proof");
+          }
+          localStorage.removeItem("verifyme_pending_wallet");
+          await refetch();
+          showToast(
+            "success",
+            `${platform.charAt(0).toUpperCase() + platform.slice(1)} Verified!`,
+            "Identity linked and cryptographically bound to your wallet."
+          );
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : "Verification failed";
+          showToast("error", "Verification failed", msg);
+        })
+        .finally(() => {
+          // Clean URL so refresh does not replay callback handling.
+          router.replace("/verify");
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -167,27 +170,23 @@ function VerifyDashboard() {
         const verifyData = await verifyRes.json();
         if (!verifyRes.ok || !verifyData.success) throw new Error(verifyData?.error || "Farcaster verify failed");
 
-        const proof = {
-          wallet,
-          platform: "farcaster" as Platform,
-          proofHash: verifyData.proofHash,
-          usernameHash: verifyData.usernameHash,
-          maskedUsername: verifyData.maskedUsername,
-          followerCount: verifyData.followerCount,
-          pfpUrl: verifyData.pfpUrl || "",
-          verifiedAt: new Date().toISOString(),
-        };
-
-        saveProofToStorage(wallet, proof);
-
-        fetch("/api/proof", {
+        const saveRes = await fetch("/api/proof", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...proof, walletProof }),
-        }).catch(() => {});
+          body: JSON.stringify({
+            wallet,
+            platform: "farcaster",
+            verificationToken: String(verifyData.verificationToken || ""),
+            walletProof,
+          }),
+        });
+        const saveData = await saveRes.json();
+        if (!saveRes.ok || !saveData?.success) {
+          throw new Error(saveData?.error || "Could not save Farcaster proof");
+        }
 
         await refetch();
-        showToast("success", "Farcaster Verified!", "Your Farcaster identity is now on-chain.");
+        showToast("success", "Farcaster Verified!", "Identity linked and cryptographically bound.");
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Could not verify Farcaster identity.";
         showToast("error", "Error", msg);
@@ -202,14 +201,22 @@ function VerifyDashboard() {
       if (!wallet) return;
       const walletProof = await ensureProofOrToast();
       if (!walletProof) return;
-      removeProofFromStorage(wallet, platform);
-      await refetch();
-      fetch("/api/proof", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, platform, walletProof }),
-      }).catch(() => {});
-      showToast("success", "Disconnected", `${platform} verification removed.`);
+      try {
+        const res = await fetch("/api/proof", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet, platform, walletProof }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || "Failed to disconnect platform");
+        }
+        await refetch();
+        showToast("success", "Disconnected", `${platform} verification removed.`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Disconnect failed";
+        showToast("error", "Disconnect failed", msg);
+      }
     },
     [wallet, refetch, showToast, ensureProofOrToast]
   );
@@ -220,7 +227,6 @@ function VerifyDashboard() {
       if (!wallet) return;
       const proof = await ensureProofOrToast();
       if (!proof) return;
-      removeProofFromStorage(wallet, platform);
       refetch();
       if (platform === "farcaster") {
         showToast("success", "Ready", "Click Connect Farcaster to re-verify.");
@@ -236,20 +242,27 @@ function VerifyDashboard() {
     if (!wallet) return;
     const walletProof = await ensureProofOrToast();
     if (!walletProof) return;
-
-    const platforms: Platform[] = ["github", "discord", "farcaster"];
-    platforms.forEach((p) => removeProofFromStorage(wallet, p));
-    await Promise.all(
-      platforms.map((p) =>
-        fetch("/api/proof", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet, platform: p, walletProof }),
-        }).catch(() => {})
-      )
-    );
-    await refetch();
-    showToast("success", "Disconnected", "All verifications removed.");
+    try {
+      const platforms: Platform[] = ["github", "discord", "farcaster"];
+      const results = await Promise.all(
+        platforms.map((p) =>
+          fetch("/api/proof", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet, platform: p, walletProof }),
+          }).then(async (res) => ({ ok: res.ok, data: await res.json() }))
+        )
+      );
+      const failed = results.find((r) => !r.ok || !r.data?.success);
+      if (failed) {
+        throw new Error(failed.data?.error || "Failed to disconnect one or more platforms");
+      }
+      await refetch();
+      showToast("success", "Disconnected", "All verifications removed.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Disconnect all failed";
+      showToast("error", "Disconnect failed", msg);
+    }
   }, [wallet, refetch, showToast, ensureProofOrToast]);
 
   // Not connected
