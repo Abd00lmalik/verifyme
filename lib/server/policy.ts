@@ -54,7 +54,7 @@ function filterByAge(proofs: ProofRecord[], maxAgeDays?: number): ProofRecord[] 
 }
 
 export async function evaluatePolicy(wallet: string, policy: VerificationPolicy): Promise<PolicyEvaluation> {
-  const proofs = await getProofs(wallet);
+  const proofs = (await getProofs(wallet)).filter((proof) => proof.verified !== false);
   const identityRoot = await getIdentityRoot(wallet);
   const cardId = cardIdFromWallet(wallet);
 

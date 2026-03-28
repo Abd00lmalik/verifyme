@@ -13,7 +13,7 @@ interface Props {
     nonce: string;
     domain: string;
     pfpUrl?: string;
-  }) => void;
+  }) => Promise<void> | void;
   onError?: (err: unknown) => void;
 }
 

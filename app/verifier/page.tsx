@@ -230,6 +230,39 @@ function VerifierDashboard() {
 
             <div>
               <p style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>
+                Linked Identities
+              </p>
+              {proofs.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                  No linked identities found.
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {proofs.map((proof) => (
+                    <div key={`${proof.platform}-${proof.userId}`} style={{ border: "1px solid var(--border-subtle)", borderRadius: "10px", background: "var(--bg-elevated)", padding: "10px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
+                        <p style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600 }}>
+                          {proof.platform.toUpperCase()}  {proof.username}
+                        </p>
+                        <p style={{ fontSize: "12px", color: "var(--success)" }}>Verified</p>
+                      </div>
+                      <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>User ID: {proof.userId}</p>
+                      <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                        Verified at: {new Date(proof.verifiedAt).toLocaleString()}
+                      </p>
+                      <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                        Proof method: {proof.proofMethod}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Divider my="8px" />
+
+            <div>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>
                 Access Check
               </p>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
