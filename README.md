@@ -1,6 +1,6 @@
-# VerifyMe - Wallet-Linked Identity Attestation on Rialo
+﻿# Rialink - Wallet-Linked Identity Attestation on Rialo
 
-VerifyMe is a Web3 identity attestation dApp that binds a wallet to public social identities (GitHub, Discord, Farcaster), then exposes trust signals for people and apps to consume.
+Rialink is a Web3 identity attestation dApp that binds a wallet to public social identities (GitHub, Discord, Farcaster), then exposes trust signals for people and apps to consume.
 
 It is built with:
 - Next.js 14 App Router
@@ -11,13 +11,13 @@ It is built with:
 - Farcaster auth kit
 
 Live app:
-- `https://verifyme-two.vercel.app`
+- `https://rialink-two.vercel.app`
 
 ---
 
-## 1. What VerifyMe Does
+## 1. What Rialink Does
 
-VerifyMe lets a wallet owner prove:
+Rialink lets a wallet owner prove:
 - "I control this wallet"
 - "I also control these social accounts"
 
@@ -38,7 +38,7 @@ Wallets are pseudonymous by default. For DAOs, grant programs, bounties, and com
 - easy for sybil wallets to appear legitimate
 - no standard reusable "identity trust layer" across dApps
 
-VerifyMe solves this by creating portable wallet-linked trust signals that can be consumed by any app through simple API calls.
+Rialink solves this by creating portable wallet-linked trust signals that can be consumed by any app through simple API calls.
 
 ---
 
@@ -152,7 +152,7 @@ Current protections include:
 
 ## 7. Privacy Model
 
-VerifyMe is built as a low-PII trust layer.
+Rialink is built as a low-PII trust layer.
 
 Stored:
 - wallet address
@@ -240,7 +240,7 @@ When checks pass, server issues `vm_...` access token signed with HMAC-SHA256.
 
 ## 12. Rialo Integration (Current and Future Architecture)
 
-VerifyMe currently stores proofs off-chain (Redis) and exposes them via APIs.  
+Rialink currently stores proofs off-chain (Redis) and exposes them via APIs.  
 The architecture is intentionally designed so integrator-facing APIs can remain stable while trust moves on-chain over time.
 
 ### Current state
@@ -271,7 +271,7 @@ The architecture is intentionally designed so integrator-facing APIs can remain 
 - `get_identity(wallet)`
 
 ### Rialo technology alignment
-Based on Rialo public materials, VerifyMe can align with:
+Based on Rialo public materials, Rialink can align with:
 - Rialo VM / SVM compatibility:
   - wallet tooling and transaction model continuity
 - Reactive execution:
@@ -334,3 +334,4 @@ npm install
 cp .env.local.example .env.local
 npm run dev
 ```
+
