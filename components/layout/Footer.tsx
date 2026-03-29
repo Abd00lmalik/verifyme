@@ -70,7 +70,12 @@ export function Footer() {
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>
+            <img
+              src="/rialink-mark.svg"
+              alt="Rialink logo"
+              style={{ width: '18px', height: '18px', borderRadius: '5px', border: '1px solid rgba(222,218,204,0.2)' }}
+            />
             Rialink
           </span>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
