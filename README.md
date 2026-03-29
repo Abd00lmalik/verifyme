@@ -248,7 +248,7 @@ The architecture is intentionally designed so integrator-facing APIs can remain 
 - placeholder off-chain tx signatures for proof rows
 - identity root computed server-side
 
-### Suggested Rialo migration path
+### Rialo migration path
 
 #### Phase 1 - Root anchoring
 - Anchor wallet `identityRoot` on Rialo.
