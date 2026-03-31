@@ -26,6 +26,10 @@ export interface BindingProofPayload {
   userId: string;
   username: string;
   proofHash: string;
+  nonce?: string;
+  issuedAt?: number;
+  signature?: string;
+  version?: "v1" | "v2";
   method: string;
   socialSessionId: string;
   verifiedAt: string;
@@ -42,6 +46,8 @@ export type VerifyBindingProofErrorCode =
   | "invalid_signature"
   | "invalid_payload"
   | "proof_hash_mismatch"
+  | "proof_expired"
+  | "invalid_nonce"
   | "wallet_message_mismatch"
   | "wallet_signature_invalid"
   | "verification_failed";
@@ -57,6 +63,16 @@ type VerifyBindingProofResult =
     };
 
 const ALLOWED_PLATFORMS = new Set<Platform>(["github", "discord", "farcaster"]);
+const PROOF_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isValidNonce(input: string): boolean {
+  const value = String(input || "").trim();
+  if (!value) return false;
+  if (value === "legacy") return true;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
 
 function isValidIsoTimestamp(input: string): boolean {
   const ts = Date.parse(input);
@@ -122,9 +138,20 @@ function isBindingPayload(value: unknown): value is BindingProofPayload {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   const walletProof = row.walletProof as Record<string, unknown> | undefined;
+  const version = String(row.version || "v1");
+  const isVersionValid = version === "v1" || version === "v2";
+  const nonceValid =
+    row.nonce === undefined || (typeof row.nonce === "string" && row.nonce.length > 0);
+  const issuedAtValid =
+    row.issuedAt === undefined ||
+    (typeof row.issuedAt === "number" && Number.isFinite(row.issuedAt));
+  const signatureValid =
+    row.signature === undefined ||
+    (typeof row.signature === "string" && /^[a-f0-9]{64}$/i.test(row.signature));
 
   return (
     row.v === "rialink-binding-v1" &&
+    isVersionValid &&
     typeof row.wallet === "string" &&
     row.wallet.length > 0 &&
     typeof row.platform === "string" &&
@@ -135,6 +162,9 @@ function isBindingPayload(value: unknown): value is BindingProofPayload {
     row.username.length > 0 &&
     typeof row.proofHash === "string" &&
     isSha256Hex(row.proofHash) &&
+    nonceValid &&
+    issuedAtValid &&
+    signatureValid &&
     typeof row.method === "string" &&
     row.method.length > 0 &&
     typeof row.socialSessionId === "string" &&
@@ -196,6 +226,10 @@ export function createBindingProof(args: {
   userId: string;
   username: string;
   proofHash: string;
+  nonce: string;
+  issuedAt: number;
+  signature: string;
+  version: "v1" | "v2";
   proofMethod: string;
   socialSessionId: string;
   verifiedAt: string;
@@ -208,6 +242,10 @@ export function createBindingProof(args: {
     userId: args.userId,
     username: args.username,
     proofHash: args.proofHash,
+    nonce: args.nonce,
+    issuedAt: args.issuedAt,
+    signature: args.signature,
+    version: args.version,
     method: args.proofMethod,
     socialSessionId: args.socialSessionId,
     verifiedAt: args.verifiedAt,
@@ -276,12 +314,39 @@ export function verifyBindingProofToken(token: string): VerifyBindingProofResult
       };
     }
 
+    const version = decoded.version === "v2" ? "v2" : "v1";
+    const nonce = String(decoded.nonce || (version === "v1" ? "legacy" : "")).trim();
+    if (!isValidNonce(nonce)) {
+      return {
+        valid: false,
+        error: { code: "invalid_nonce", message: "Invalid proof nonce" },
+      };
+    }
+
+    if (version === "v2") {
+      const issuedAt = Number(decoded.issuedAt || 0);
+      if (!Number.isFinite(issuedAt) || issuedAt <= 0) {
+        return {
+          valid: false,
+          error: { code: "invalid_payload", message: "Invalid proof issuedAt" },
+        };
+      }
+      if (Date.now() - issuedAt > PROOF_MAX_AGE_MS) {
+        return {
+          valid: false,
+          error: { code: "proof_expired", message: "Proof is older than 7 days" },
+        };
+      }
+    }
+
     // Deterministic anti-tamper check:
-    // recompute proof hash from wallet/platform/userId and compare with signed payload.
+    // recompute proof hash from wallet/platform/userId/nonce and compare with signed payload.
     const expectedProofHash = computeProofHash({
       wallet: decoded.wallet,
       platform: decoded.platform,
       platformUserId: decoded.userId,
+      nonce,
+      version,
     });
     if (decoded.proofHash !== expectedProofHash) {
       return {

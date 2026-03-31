@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import type { Platform, ProofRecord } from "@/lib/types";
 import {
@@ -12,6 +12,7 @@ import { verifyWalletProof } from "@/lib/server/wallet-proof";
 import { cardIdFromWallet } from "@/lib/card-id";
 import { computeProofHash } from "@/lib/proof-hash";
 import { createBindingProof } from "@/lib/server/binding-proof";
+import { signProof } from "@/lib/server/proof-signing";
 import { consumeVerifiedSocialSession } from "@/lib/server/verification-session";
 
 export const runtime = "nodejs";
@@ -29,6 +30,11 @@ function toApiProof(proof: ProofRecord) {
     verified: proof.verified,
     verified_at: proof.verifiedAt,
     verifiedAt: proof.verifiedAt,
+    issued_at: proof.issuedAt,
+    issuedAt: proof.issuedAt,
+    nonce: proof.nonce,
+    signature: proof.signature,
+    version: proof.version,
     proof_hash: proof.proofHash,
     proofHash: proof.proofHash,
     proof_method: proof.proofMethod,
@@ -130,11 +136,16 @@ export async function POST(req: NextRequest) {
     const socialSession = verifiedSession.session;
 
     const verifiedAt = new Date().toISOString();
+    const issuedAt = Date.now();
+    const nonce = randomUUID();
     const proofHash = computeProofHash({
       wallet,
       platform,
       platformUserId: socialSession.userId,
+      nonce,
+      version: "v2",
     });
+    const signature = signProof(proofHash);
 
     const bindingProof = createBindingProof({
       wallet,
@@ -142,6 +153,10 @@ export async function POST(req: NextRequest) {
       userId: socialSession.userId,
       username: socialSession.username,
       proofHash,
+      nonce,
+      issuedAt,
+      version: "v2",
+      signature,
       proofMethod: socialSession.proofMethod,
       socialSessionId: socialSession.id,
       verifiedAt,
@@ -156,6 +171,10 @@ export async function POST(req: NextRequest) {
       ...(socialSession.fullName ? { fullName: socialSession.fullName } : {}),
       verified: true,
       verifiedAt,
+      nonce,
+      issuedAt,
+      signature,
+      version: "v2",
       proofMethod: socialSession.proofMethod,
       proofHash,
       bindingProof,

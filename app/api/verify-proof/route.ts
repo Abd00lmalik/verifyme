@@ -21,6 +21,8 @@ function statusForProofError(code: VerifyBindingProofErrorCode): number {
     case "malformed_proof":
     case "invalid_payload":
     case "proof_hash_mismatch":
+    case "proof_expired":
+    case "invalid_nonce":
     case "wallet_message_mismatch":
       return 400;
     case "invalid_signature":

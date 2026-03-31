@@ -1,10 +1,9 @@
-const JS_QUICK_START = `const res = await fetch(
-  'https://rialink.vercel.app/api/verify/WALLET_ADDRESS'
-);
-const identity = await res.json();
+const JS_QUICK_START = `import { verifyWallet } from "rialink-sdk";
 
-if (identity.trustLevel === 'high') {
-  // wallet has 3 verified platforms - grant full access
+const result = await verifyWallet("WALLET_ADDRESS");
+
+if (result.valid) {
+  // trusted user
 }`;
 
 const PYTHON_QUICK_START = `import requests
@@ -66,20 +65,20 @@ const API_ROWS = [
 
 const USE_CASES = [
   {
-    title: "DAO Grants",
-    body: "Require verified GitHub + Discord before accepting grant applications",
+    title: "Access Gating",
+    body: "Gate airdrops, communities, and feature access to verified wallets in one call.",
   },
   {
-    title: "Bounty Programs",
-    body: "Only pay verified developer wallets",
+    title: "Sybil Resistance",
+    body: "Reduce multi-wallet farming by requiring signed, replay-resistant identity proofs.",
   },
   {
-    title: "Hackathons",
-    body: "Prevent duplicate registrations with wallet-linked identity",
+    title: "Verified Badges",
+    body: "Show public proof-backed badges on profiles, dashboards, and contributor pages.",
   },
   {
-    title: "Community Access",
-    body: "Gate Discord roles or token-gated content with verified identity",
+    title: "Bot Filtering",
+    body: "Reject low-trust or unverifiable wallets before they spam forms and APIs.",
   },
 ];
 

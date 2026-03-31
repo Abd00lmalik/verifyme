@@ -27,6 +27,10 @@ export interface ProofRecord {
   fullName?: string;
   verified: boolean;
   verifiedAt: string;
+  nonce: string;
+  issuedAt: number;
+  signature: string;
+  version: "v1" | "v2";
   proofMethod: string;
   proofHash: string;
   bindingProof: BindingProofRecord;
