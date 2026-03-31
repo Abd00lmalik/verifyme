@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
+import type { ProofRecord } from "@/lib/types";
+import { computeProofHash } from "@/lib/proof-hash";
+import { signProof } from "@/lib/server/proof-signing";
+import { verifyStoredProof } from "@/lib/server/verify-proof";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,10 +11,16 @@ export const dynamic = "force-dynamic";
 type Platform = "github" | "discord" | "farcaster";
 
 interface StoredProofRow {
+  wallet: string;
   platform: Platform;
+  userId: string;
   username: string;
   fullName?: string;
   proofHash: string;
+  signature: string;
+  nonce: string;
+  issuedAt: number;
+  version: "v1" | "v2";
   verifiedAt: string;
   verified: boolean;
   pfpUrl?: string;
@@ -54,14 +64,6 @@ function toNumberOrUndefined(value: unknown): number | undefined {
   return num;
 }
 
-function formatProofHash(value: string): string {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const clean = raw.replace(/^0x/i, "");
-  if (clean.length <= 10) return `0x${clean}`;
-  return `0x${clean.slice(0, 4)}...${clean.slice(-4)}`;
-}
-
 function deriveTrustLevel(totalVerified: number): "high" | "medium" | "low" | "none" {
   if (totalVerified >= 3) return "high";
   if (totalVerified >= 2) return "medium";
@@ -69,27 +71,58 @@ function deriveTrustLevel(totalVerified: number): "high" | "medium" | "low" | "n
   return "none";
 }
 
-function normalizeProofRow(row: unknown): StoredProofRow | null {
+function normalizeProofRow(row: unknown, walletFromKey?: string): StoredProofRow | null {
   if (!row || typeof row !== "object") return null;
   const obj = row as Record<string, unknown>;
+
+  const wallet = String(obj.wallet || walletFromKey || "").trim();
+  if (!wallet) return null;
 
   const platformValue = String(obj.platform || "").trim().toLowerCase();
   if (!isPlatform(platformValue)) return null;
 
   const usernameRaw = String(obj.username || obj.maskedUsername || "").trim();
+  const userId = String(obj.userId || obj.user_id || "").trim();
   const username =
     usernameRaw ||
-    String(obj.userId || obj.user_id || `${platformValue}:unknown`).trim();
+    (userId || `${platformValue}:unknown`);
   const fullName = String(obj.fullName || obj.full_name || "").trim();
-  const proofHash = String(obj.proofHash || obj.proof_hash || "").trim();
+  const proofHashInput = String(obj.proofHash || obj.proof_hash || "").trim();
+  const nonce = String(obj.nonce || "").trim() || "legacy";
+  const issuedAtRaw = Number(obj.issuedAt || obj.issued_at || 0);
+  const version = obj.version === "v2" ? "v2" : "v1";
+  const normalizedUserId = userId || `${platformValue}:unknown`;
+  const proofHash =
+    proofHashInput ||
+    computeProofHash({
+      wallet,
+      platform: platformValue,
+      platformUserId: normalizedUserId,
+      nonce,
+      version,
+    });
+  let signature = String(obj.signature || "").trim();
+  if (!signature && proofHash) {
+    try {
+      signature = signProof(proofHash);
+    } catch {
+      signature = "";
+    }
+  }
   const verifiedAt = String(obj.verifiedAt || obj.verified_at || "").trim();
   const pfpUrl = String(obj.pfpUrl || obj.pfp_url || "").trim();
 
   return {
+    wallet,
     platform: platformValue,
+    userId: normalizedUserId,
     username,
     ...(fullName ? { fullName } : {}),
     proofHash,
+    signature,
+    nonce,
+    issuedAt: Number.isFinite(issuedAtRaw) ? issuedAtRaw : 0,
+    version,
     verifiedAt,
     verified: obj.verified !== false,
     ...(pfpUrl ? { pfpUrl } : {}),
@@ -116,11 +149,45 @@ async function readProofs(wallet: string): Promise<StoredProofRow[]> {
     const key = `proofs:${wallet}`;
     const rows = (await redis.lrange<unknown>(key, 0, -1)) || [];
     return rows
-      .map((row) => normalizeProofRow(row))
+      .map((row) => normalizeProofRow(row, wallet))
       .filter((row): row is StoredProofRow => !!row);
   } catch {
     return [];
   }
+}
+
+function toProofRecord(proof: StoredProofRow): ProofRecord {
+  return {
+    wallet: proof.wallet,
+    platform: proof.platform,
+    userId: proof.userId,
+    username: proof.username,
+    ...(proof.fullName ? { fullName: proof.fullName } : {}),
+    verified: proof.verified,
+    verifiedAt: proof.verifiedAt,
+    nonce: proof.nonce,
+    issuedAt: proof.issuedAt,
+    signature: proof.signature,
+    version: proof.version,
+    proofMethod: "verify-api",
+    proofHash: proof.proofHash,
+    bindingProof: {
+      method: "verify-api",
+      algorithm: "HS256",
+      verifier: "rialink-api",
+      issuedAt: proof.verifiedAt,
+      socialSessionId: "verify-api",
+      walletNonce: "",
+      walletSignature: "",
+      walletMessage: "",
+      token: "",
+    },
+    ...(proof.pfpUrl ? { pfpUrl: proof.pfpUrl } : {}),
+    ...(proof.repoCount !== undefined ? { repoCount: proof.repoCount } : {}),
+    ...(proof.commitCount !== undefined ? { commitCount: proof.commitCount } : {}),
+    ...(proof.followerCount !== undefined ? { followerCount: proof.followerCount } : {}),
+    ...(proof.serverCount !== undefined ? { serverCount: proof.serverCount } : {}),
+  };
 }
 
 export async function OPTIONS() {
@@ -144,6 +211,7 @@ export async function GET(
   const allProofs = await readProofs(wallet);
   const proofs = allProofs
     .filter((proof) => proof.verified)
+    .filter((proof) => verifyStoredProof(toProofRecord(proof)))
     .sort(
       (a, b) =>
         PLATFORM_ORDER.indexOf(a.platform) - PLATFORM_ORDER.indexOf(b.platform)
@@ -164,10 +232,18 @@ export async function GET(
     maxPossible: MAX_POSSIBLE,
     proofs: proofs.map((proof) => ({
       platform: proof.platform,
+      userId: proof.userId,
+      user_id: proof.userId,
       username: proof.username,
       ...(proof.fullName ? { fullName: proof.fullName } : {}),
       ...(proof.pfpUrl ? { pfpUrl: proof.pfpUrl } : {}),
-      proofHash: formatProofHash(proof.proofHash),
+      proofHash: proof.proofHash,
+      proof_hash: proof.proofHash,
+      signature: proof.signature,
+      nonce: proof.nonce,
+      issuedAt: proof.issuedAt,
+      issued_at: proof.issuedAt,
+      version: proof.version,
       verifiedAt: proof.verifiedAt,
       ...(proof.repoCount !== undefined ? { repoCount: proof.repoCount } : {}),
       ...(proof.commitCount !== undefined ? { commitCount: proof.commitCount } : {}),

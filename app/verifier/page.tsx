@@ -10,10 +10,15 @@ type Platform = "github" | "discord" | "farcaster";
 
 interface VerifyProof {
   platform: Platform;
+  userId?: string;
   username: string;
   fullName?: string;
   pfpUrl?: string;
   proofHash: string;
+  signature?: string;
+  nonce?: string;
+  issuedAt?: number;
+  version?: "v1" | "v2";
   verifiedAt: string;
   repoCount?: number;
   commitCount?: number;
@@ -55,6 +60,13 @@ function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown";
   return date.toLocaleString();
+}
+
+function shortenHash(value: string): string {
+  const hash = String(value || "").trim();
+  if (!hash) return "";
+  if (hash.length <= 16) return hash;
+  return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
 }
 
 function trustTone(level: TrustLevel): string {
@@ -589,8 +601,37 @@ function VerifierContent() {
                           marginTop: "2px",
                         }}
                       >
-                        {proof.proofHash}
+                        {shortenHash(proof.proofHash)}
                       </p>
+                      <details style={{ marginTop: "8px" }}>
+                        <summary style={{ fontSize: "12px", color: "var(--text-secondary)", cursor: "pointer" }}>
+                          Verifiable Proof
+                        </summary>
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "8px",
+                            padding: "8px",
+                            background: "var(--bg-elevated)",
+                          }}
+                        >
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>Full proof hash</p>
+                          <p style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--text-primary)", wordBreak: "break-all" }}>
+                            {proof.proofHash}
+                          </p>
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>Signature</p>
+                          <p style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--text-primary)", wordBreak: "break-all" }}>
+                            {proof.signature || "-"}
+                          </p>
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
+                            Issued at
+                          </p>
+                          <p style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--text-primary)" }}>
+                            {proof.issuedAt ? new Date(proof.issuedAt).toISOString() : "-"}
+                          </p>
+                        </div>
+                      </details>
 
                       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "10px" }}>
                         {proof.repoCount !== undefined && (

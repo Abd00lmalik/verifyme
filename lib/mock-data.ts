@@ -2,6 +2,11 @@
 
 export const MOCK_WALLET = "7xKmW3RqPbN9eDfTvL2sY6hJcA4mX8uZ1nQrV5wE3pk";
 
+function mockSignature(seed: string): string {
+  const base = seed.padEnd(64, "0").slice(0, 64);
+  return base.replace(/[^a-f0-9]/gi, "a");
+}
+
 function mockBindingProof(id: string, nonce: string): ProofRecord["bindingProof"] {
   return {
     method: "oauth+wallet-signature",
@@ -24,6 +29,10 @@ export const MOCK_PROOFS: ProofRecord[] = [
     username: "abd00lmalik",
     verified: true,
     verifiedAt: "2026-03-26T10:12:00Z",
+    nonce: "legacy",
+    issuedAt: 0,
+    signature: mockSignature("gh9919"),
+    version: "v1",
     proofMethod: "oauth+wallet-signature",
     proofHash:
       "89d0a4b55e7f31c248d1f9708f6a2c9b89d0a4b55e7f31c248d1f9708f6a2c9b",
@@ -40,6 +49,10 @@ export const MOCK_PROOFS: ProofRecord[] = [
     username: "abd00lmalik11",
     verified: true,
     verifiedAt: "2026-03-26T10:14:00Z",
+    nonce: "legacy",
+    issuedAt: 0,
+    signature: mockSignature("dc33801155"),
+    version: "v1",
     proofMethod: "oauth+wallet-signature",
     proofHash:
       "4011e77d945da1b8849f63c7720b6a514011e77d945da1b8849f63c7720b6a51",
@@ -56,6 +69,10 @@ export const MOCK_PROOFS: ProofRecord[] = [
     username: "abd1",
     verified: true,
     verifiedAt: "2026-03-26T10:16:00Z",
+    nonce: "legacy",
+    issuedAt: 0,
+    signature: mockSignature("fc10381"),
+    version: "v1",
     proofMethod: "farcaster-signin+wallet-signature",
     proofHash:
       "4f60710b734bc8e5f3a2d1c0b9a887664f60710b734bc8e5f3a2d1c0b9a88766",

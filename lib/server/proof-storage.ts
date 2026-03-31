@@ -3,14 +3,17 @@ import { createHash } from "crypto";
 import type { Platform, ProofRecord } from "@/lib/types";
 import { cardIdFromWallet } from "@/lib/card-id";
 import { computeProofHash } from "@/lib/proof-hash";
+import { signProof } from "@/lib/server/proof-signing";
 
 const redis = Redis.fromEnv();
 const PROOF_PREFIX = "proofs:";
 const ROOT_PREFIX = "root:";
 const CARD_PREFIX = "card:";
 const PLATFORM_USER_PREFIX = "platform-user:";
+const PROOF_NONCE_PREFIX = "proof-nonce:";
 const PROOF_WALLET_LOCK_PREFIX = "proofs:lock:";
 const PLATFORM_USER_LOCK_PREFIX = "platform-user:lock:";
+const PROOF_NONCE_LOCK_PREFIX = "proof-nonce:lock:";
 
 const MUTATION_LOCK_TTL_SECONDS = 30;
 
@@ -39,12 +42,24 @@ function platformUserKey(platform: Platform, userId: string) {
   return `${PLATFORM_USER_PREFIX}${platform}:${userId}`;
 }
 
+function proofNonceKey(nonce: string) {
+  return `${PROOF_NONCE_PREFIX}${nonce}`;
+}
+
 function walletLockKey(wallet: string) {
   return `${PROOF_WALLET_LOCK_PREFIX}${wallet}`;
 }
 
 function platformUserLockKey(platform: Platform, userId: string) {
   return `${PLATFORM_USER_LOCK_PREFIX}${platform}:${userId}`;
+}
+
+function proofNonceLockKey(nonce: string) {
+  return `${PROOF_NONCE_LOCK_PREFIX}${nonce}`;
+}
+
+function proofNonceOwner(wallet: string, platform: Platform, userId: string) {
+  return `${wallet}:${platform}:${userId}`;
 }
 
 function fallbackBindingProof(verifiedAt: string): ProofRecord["bindingProof"] {
@@ -76,13 +91,20 @@ function normalizeProofRecord(value: unknown, walletFromKey?: string): ProofReco
   const fullName = String(row.fullName || row.full_name || "").trim();
   const userId = String(row.userId || row.usernameHash || "").trim();
   const resolvedUserId = userId || `${platform}:legacy:${createHash("sha256").update(username || wallet).digest("hex").slice(0, 16)}`;
+  const version = row.version === "v2" ? "v2" : "v1";
+  const nonce = String(row.nonce || "").trim() || "legacy";
+  const issuedAtRaw = Number(row.issuedAt);
+  const issuedAt = Number.isFinite(issuedAtRaw) && issuedAtRaw > 0 ? issuedAtRaw : 0;
   const proofHash =
     String(row.proofHash || "").trim() ||
     computeProofHash({
       wallet,
       platform,
       platformUserId: resolvedUserId,
+      nonce,
+      version,
     });
+  const signature = String(row.signature || "").trim() || signProof(proofHash);
 
   const bindingProof =
     row.bindingProof && typeof row.bindingProof === "object"
@@ -97,6 +119,10 @@ function normalizeProofRecord(value: unknown, walletFromKey?: string): ProofReco
     ...(fullName ? { fullName } : {}),
     verified: row.verified === false ? false : true,
     verifiedAt,
+    nonce,
+    issuedAt,
+    signature,
+    version,
     proofMethod: String(row.proofMethod || bindingProof.method || "legacy-bridge"),
     proofHash,
     bindingProof: {
@@ -183,6 +209,9 @@ export async function saveProof(wallet: string, proof: ProofRecord) {
   const existing = await readWalletProofs(wallet);
   const existingByPlatform = existing.find((p) => p.platform === proof.platform);
   const locks = [walletLockKey(wallet), platformUserLockKey(proof.platform, proof.userId)];
+  if (proof.nonce && proof.nonce !== "legacy") {
+    locks.push(proofNonceLockKey(proof.nonce));
+  }
   if (
     existingByPlatform &&
     existingByPlatform.userId &&
@@ -190,10 +219,19 @@ export async function saveProof(wallet: string, proof: ProofRecord) {
   ) {
     locks.push(platformUserLockKey(existingByPlatform.platform, existingByPlatform.userId));
   }
+  if (
+    existingByPlatform &&
+    existingByPlatform.nonce &&
+    existingByPlatform.nonce !== "legacy" &&
+    existingByPlatform.nonce !== proof.nonce
+  ) {
+    locks.push(proofNonceLockKey(existingByPlatform.nonce));
+  }
 
   return withLocks(locks, async () => {
     const freshExisting = await readWalletProofs(wallet);
     const freshByPlatform = freshExisting.find((p) => p.platform === proof.platform);
+    const nextNonceOwner = proofNonceOwner(wallet, proof.platform, proof.userId);
 
     const accountOwner = await redis.get<string>(
       platformUserKey(proof.platform, proof.userId)
@@ -203,6 +241,12 @@ export async function saveProof(wallet: string, proof: ProofRecord) {
         `${proof.platform} account ${proof.username} is already linked to another wallet`
       );
     }
+    if (proof.nonce && proof.nonce !== "legacy") {
+      const nonceOwner = await redis.get<string>(proofNonceKey(proof.nonce));
+      if (nonceOwner && nonceOwner !== nextNonceOwner) {
+        throw new ProofConflictError("Proof nonce has already been used");
+      }
+    }
 
     const filtered = freshExisting.filter((p) => p.platform !== proof.platform);
     const nextProofs = [...filtered, proof];
@@ -210,11 +254,31 @@ export async function saveProof(wallet: string, proof: ProofRecord) {
 
     // Keep reverse index in sync so one social account cannot be linked to multiple wallets.
     await redis.set(platformUserKey(proof.platform, proof.userId), wallet);
+    if (proof.nonce && proof.nonce !== "legacy") {
+      await redis.set(proofNonceKey(proof.nonce), nextNonceOwner);
+    }
     if (freshByPlatform && freshByPlatform.userId && freshByPlatform.userId !== proof.userId) {
       const oldKey = platformUserKey(freshByPlatform.platform, freshByPlatform.userId);
       const oldMappedWallet = await redis.get<string>(oldKey);
       if (oldMappedWallet === wallet) {
         await redis.del(oldKey);
+      }
+    }
+    if (
+      freshByPlatform &&
+      freshByPlatform.nonce &&
+      freshByPlatform.nonce !== "legacy" &&
+      freshByPlatform.nonce !== proof.nonce
+    ) {
+      const oldNonceKey = proofNonceKey(freshByPlatform.nonce);
+      const oldNonceOwner = await redis.get<string>(oldNonceKey);
+      const previousOwner = proofNonceOwner(
+        wallet,
+        freshByPlatform.platform,
+        freshByPlatform.userId
+      );
+      if (oldNonceOwner === previousOwner) {
+        await redis.del(oldNonceKey);
       }
     }
 
@@ -233,7 +297,14 @@ export async function saveProof(wallet: string, proof: ProofRecord) {
 }
 
 export async function deleteProof(wallet: string, platform: Platform) {
-  return withLocks([walletLockKey(wallet)], async () => {
+  const existing = await readWalletProofs(wallet);
+  const target = existing.find((p) => p.platform === platform);
+  const locks = [walletLockKey(wallet)];
+  if (target?.nonce && target.nonce !== "legacy") {
+    locks.push(proofNonceLockKey(target.nonce));
+  }
+
+  return withLocks(locks, async () => {
     const existing = await readWalletProofs(wallet);
     const removed = existing.find((p) => p.platform === platform);
     const filtered = existing.filter((p) => p.platform !== platform);
@@ -245,6 +316,14 @@ export async function deleteProof(wallet: string, platform: Platform) {
       const mappedWallet = await redis.get<string>(reverseKey);
       if (mappedWallet === wallet) {
         await redis.del(reverseKey);
+      }
+    }
+    if (removed?.nonce && removed.nonce !== "legacy") {
+      const nonceKey = proofNonceKey(removed.nonce);
+      const mappedOwner = await redis.get<string>(nonceKey);
+      const expectedOwner = proofNonceOwner(wallet, removed.platform, removed.userId);
+      if (mappedOwner === expectedOwner) {
+        await redis.del(nonceKey);
       }
     }
 
