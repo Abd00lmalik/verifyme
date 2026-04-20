@@ -276,7 +276,7 @@ The architecture is intentionally designed so integrator-facing APIs can remain 
 - `get_identity(wallet)`
 
 ### Rialo technology alignment
-Based on Rialo public materials, Rialink can align with:
+Rialink can align with:
 - Rialo VM / SVM compatibility:
   - wallet tooling and transaction model continuity
 - Reactive execution:
@@ -289,51 +289,6 @@ Based on Rialo public materials, Rialink can align with:
   - faster query response for high-traffic gating
 - gasless UX paths:
   - sponsored proof anchoring for users
-
----
-
-## 13. Consultant Notes and Scope Signals
-
-What makes this project meaningful:
-- clear real-world utility (grant gating, bounty integrity, community trust)
-- privacy-preserving alternative to heavy KYC workflows
-- API-first design that external dApps can adopt quickly
-- migration-ready architecture from off-chain to on-chain trust anchoring
-
-What to evaluate before scale-up:
-- rate limiting and abuse controls for public APIs
-- explicit SLOs for proof freshness and revocation latency
-- key management and rotation for signing secrets
-- indexer strategy for on-chain read performance
-- backward compatibility guarantees for API versions
-
----
-
-## 14. Environment Variables
-
-Key variables used in this codebase:
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
-- `GITHUB_REDIRECT_URI`
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `DISCORD_REDIRECT_URI`
-- `FARCASTER_RPC_URL`
-- `NEXT_PUBLIC_FARCASTER_RELAY_URL`
-- `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_RIALO_RPC_URL`
-- `NEXT_PUBLIC_RIALO_EXPLORER_URL`
-- `POLICY_SIGNING_SECRET`
-- `PROOF_SIGNING_SECRET`
-- `POLICY_TOKEN_TTL_SECONDS`
-- `TRUSTED_WALLET_PROOF_DOMAINS`
-- `PUBLIC_CORS_ORIGIN`
-
----
-
-## 15. Local Development
 
 ```bash
 npm install
